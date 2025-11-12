@@ -1,0 +1,134 @@
+#include "CS3113/Level0.h"
+#include "CS3113/LevelA.h"
+
+// Global Constants
+constexpr int SCREEN_WIDTH     = 1000,
+              SCREEN_HEIGHT    = 600,
+              FPS              = 120;
+constexpr Vector2 ORIGIN      = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
+constexpr float FIXED_TIMESTEP = 1.0f / 60.0f;
+
+// Global Variables
+AppStatus gAppStatus   = RUNNING;
+float gPreviousTicks   = 0.0f,
+      gTimeAccumulator = 0.0f;
+
+Scene *gCurrentScene = nullptr;
+std::vector<Scene*> gLevels;
+
+Level0 *gLevel0 = nullptr;
+LevelA *gLevelA = nullptr;
+
+// Function Declarations
+void switchToScene(Scene *scene);
+void initialise();
+void processInput();
+void update();
+void render();
+void shutdown();
+
+void switchToScene(Scene *scene)
+{   
+    if (scene) {
+        if (gCurrentScene) gCurrentScene->shutdown();   
+        gCurrentScene = scene;
+        gCurrentScene->initialise();
+    }
+
+}
+
+void initialise()
+{
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Scenes");
+    InitAudioDevice();
+
+    // --- Create scene objects ---
+    gLevel0 = new Level0(ORIGIN, "#76b6ff");
+    gLevelA = new LevelA(ORIGIN, "#76b6ff");
+
+    gLevels.push_back(gLevel0);
+    gLevels.push_back(gLevelA);
+
+    switchToScene(gLevels[0]);
+
+    SetTargetFPS(FPS);
+}
+
+void processInput() 
+{
+    if (!gCurrentScene) return;
+
+    if (gCurrentScene->getState().player) 
+    {
+        gCurrentScene->getState().player->resetMovement();
+
+        if      (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) gCurrentScene->getState().player->moveLeft();
+        else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) gCurrentScene->getState().player->moveRight();
+        if      (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) gCurrentScene->getState().player->moveUp();
+        else if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) gCurrentScene->getState().player->moveDown();
+    }
+
+    if (IsKeyPressed(KEY_Q) || WindowShouldClose()) gAppStatus = TERMINATED;
+}
+
+void update() 
+{
+    if (!gCurrentScene) return;
+
+    float ticks = (float) GetTime();
+    float deltaTime = ticks - gPreviousTicks;
+    gPreviousTicks  = ticks;
+
+    gTimeAccumulator += deltaTime;
+
+    while (gTimeAccumulator >= FIXED_TIMESTEP)
+    {
+        gCurrentScene->update(FIXED_TIMESTEP);
+        gTimeAccumulator -= FIXED_TIMESTEP;
+    }
+}
+
+void render()
+{
+    BeginDrawing();
+    if (gCurrentScene) {
+        gCurrentScene->render();
+    }
+    EndDrawing();
+}
+
+void shutdown() 
+{
+    for (auto scene : gLevels) {
+        delete scene;
+    }
+    gLevels.clear();
+
+    CloseAudioDevice();
+    CloseWindow();
+}
+
+int main(void)
+{
+    initialise();
+
+    while (gAppStatus == RUNNING)
+    {
+        processInput();
+        update();
+
+        if (gCurrentScene && gCurrentScene->getState().nextSceneID != -1)
+        {
+            int id = gCurrentScene->getState().nextSceneID;
+            if (id >= 0 && id < gLevels.size()) {
+                switchToScene(gLevels[id]);
+            }
+        }
+
+        render();
+    }
+
+    shutdown();
+
+    return 0;
+}
