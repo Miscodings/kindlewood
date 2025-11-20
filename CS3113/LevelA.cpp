@@ -29,9 +29,9 @@ void LevelA::initialise()
    mGameState.map = new Map(
       LEVEL_WIDTH, LEVEL_HEIGHT,   // map grid cols & rows
       (unsigned int *) mLevelData, // grid data
-      "assets/game/grass.png",     // texture filepath
+      "assets/game/tileset.png",     // texture filepath
       TILE_DIMENSION,              // tile size
-      9, 18,                       // texture cols & rows
+      24, 25,                       // texture cols & rows
       mOrigin                      // in-game origin
    );
 
@@ -85,6 +85,7 @@ void LevelA::initialise()
       mGameState.player->getScale().x / 4.5f,
       mGameState.player->getScale().y / 1.5f
    });
+   
 
    mGameState.camera = { 0 };                                    // zero initialize
    mGameState.camera.target = mGameState.player->getPosition(); // camera follows player
