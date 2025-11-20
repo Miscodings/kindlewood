@@ -1,51 +1,58 @@
 #include "cs3113.h"
+#include <vector>
 
 #ifndef MAP_H
 #define MAP_H
 
+struct Tileset {
+    Texture2D texture;
+    int firstGid;  // The starting Global ID for this tileset (e.g., 1, 101, etc.)
+    int tileCount; // Total number of tiles in this image
+    int columns;   // Number of columns in this image
+};
+
+struct MapLayer {
+    std::vector<unsigned int> data;
+    bool isCollidable; // We can choose which layers stop the player!
+};
+
 class Map
 {
 private:
-    int mMapColumns; // number of columns in map
-    int mMapRows;    // number of rows in map
+    int mMapColumns;
+    int mMapRows;
 
-    unsigned int *mLevelData; // array of tile indices
-    Texture2D mTextureAtlas;  // texture atlas
+    std::vector<MapLayer> mMapLayers;
 
-    float mTileSize; // size of each tile in pixels
+    std::vector<Tileset> mTilesets;
 
-    int mTextureColumns; // number of columns in texture atlas
-    int mTextureRows;    // number of rows in texture atlas
-
-    std::vector<Rectangle> mTextureAreas; // texture areas for each tile
-    Vector2 mOrigin; // center of the map in world coordinates
-
-    float mLeftBoundary;  // left boundary of the map in world coordinates
-    float mRightBoundary; // right boundary of the map in world coordinates
-    float mTopBoundary;   // top boundary of the map in world coordinates
-    float mBottomBoundary;// bottom boundary of the map in world coordinates
+    float mTileSize;
+    Vector2 mOrigin; 
+    float mLeftBoundary;
+    float mRightBoundary;
+    float mTopBoundary;
+    float mBottomBoundary;
 
 public:
-    Map(int mapColumns, int mapRows, unsigned int *levelData,
-        const char *textureFilePath, float tileSize, int textureColumns,
-        int textureRows, Vector2 origin);
+    Map(int mapColumns, int mapRows, float tileSize, Vector2 origin);
     ~Map();
+
+    void addTileset(const char* filepath, int firstGid);
+    
+    void addLayer(std::vector<unsigned int> layerData, bool isCollidable);
 
     void build();
     void render();
     bool isSolidTileAt(Vector2 position, float *xOverlap, float *yOverlap);
 
-    int           getMapColumns()     const { return mMapColumns;     };
-    int           getMapRows()        const { return mMapRows;        };
-    float         getTileSize()       const { return mTileSize;       };
-    unsigned int* getLevelData()      const { return mLevelData;      };
-    Texture2D     getTextureAtlas()   const { return mTextureAtlas;   };
-    int           getTextureColumns() const { return mTextureColumns; };
-    int           getTextureRows()    const { return mTextureRows;    };
-    float         getLeftBoundary()   const { return mLeftBoundary;   };
-    float         getRightBoundary()  const { return mRightBoundary;  };
-    float         getTopBoundary()    const { return mTopBoundary;    };
-    float         getBottomBoundary() const { return mBottomBoundary; };
+    int   getMapColumns() const { return mMapColumns; };
+    int   getMapRows()    const { return mMapRows;    };
+    float getTileSize()   const { return mTileSize;   };
+    
+    float getLeftBoundary()   const { return mLeftBoundary;   };
+    float getRightBoundary()  const { return mRightBoundary;  };
+    float getTopBoundary()    const { return mTopBoundary;    };
+    float getBottomBoundary() const { return mBottomBoundary; };
 };
 
 #endif

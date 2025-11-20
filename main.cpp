@@ -66,9 +66,12 @@ void processInput()
         else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) gCurrentScene->getState().player->moveRight();
         if      (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) gCurrentScene->getState().player->moveUp();
         else if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) gCurrentScene->getState().player->moveDown();
+
+        if (IsKeyPressed(KEY_E)) gCurrentScene->getState().player->interact(gCurrentScene->getState().entities);
+        if (IsKeyPressed(KEY_Q)) gCurrentScene->getState().player->sellItems();
     }
 
-    if (IsKeyPressed(KEY_Q) || WindowShouldClose()) gAppStatus = TERMINATED;
+    if (IsKeyPressed(KEY_F) || WindowShouldClose()) gAppStatus = TERMINATED;
 }
 
 void update() 

@@ -5,7 +5,7 @@ Entity::Entity() : mPosition {0.0f, 0.0f}, mMovement {0.0f, 0.0f},
                    mVelocity {0.0f, 0.0f}, mAcceleration {0.0f, 0.0f},
                    mScale {DEFAULT_SIZE, DEFAULT_SIZE},
                    mColliderDimensions {DEFAULT_SIZE, DEFAULT_SIZE}, 
-                   mTexture {NULL}, mTextureType {SINGLE}, mAngle {0.0f},
+                   mTexture {0}, mTextureType {SINGLE}, mAngle {0.0f},
                    mSpriteSheetDimensions {}, mDirection {RIGHT}, 
                    mAnimationAtlas {{}}, mAnimationIndices {}, mFrameSpeed {0},
                    mEntityType {NONE} { }
@@ -32,42 +32,38 @@ Entity::Entity(Vector2 position, Vector2 scale, const char *textureFilepath,
 
 Entity::~Entity() { UnloadTexture(mTexture); };
 
-void Entity::checkCollisionY(Entity *collidableEntities, int collisionCheckCount)
+void Entity::checkCollisionY(const std::vector<Entity*>& collidableEntities)
 {
-    for (int i = 0; i < collisionCheckCount; i++)
+    for (Entity* collidableEntity : collidableEntities)
     {
-        Entity *collidableEntity = &collidableEntities[i];
-        
+        if (collidableEntity == this) continue; 
+
         if (isColliding(collidableEntity))
         {
             float yDistance = fabs(mPosition.y - collidableEntity->mPosition.y);
             float yOverlap  = fabs(yDistance - (mColliderDimensions.y / 2.0f) - 
                               (collidableEntity->mColliderDimensions.y / 2.0f));
                               
-            if (mVelocity.y > 0) 
-            {
+            if (mVelocity.y > 0) {
                 mPosition.y -= yOverlap;
                 mVelocity.y  = 0;
                 mIsCollidingBottom = true;
-            } else if (mVelocity.y < 0) 
-            {
+            } else if (mVelocity.y < 0) {
                 mPosition.y += yOverlap;
                 mVelocity.y  = 0;
                 mIsCollidingTop = true;
-
-                if (collidableEntity->mEntityType == BLOCK)
-                    collidableEntity->deactivate();
             }
         }
     }
 }
 
-void Entity::checkCollisionX(Entity *collidableEntities, int collisionCheckCount)
+void Entity::checkCollisionX(const std::vector<Entity*>& collidableEntities)
 {
-    for (int i = 0; i < collisionCheckCount; i++)
+    for (Entity* collidableEntity : collidableEntities)
     {
-        Entity *collidableEntity = &collidableEntities[i];
-        
+        // Don't collide with self
+        if (collidableEntity == this) continue;
+
         if (isColliding(collidableEntity))
         {            
             float yDistance = fabs(mPosition.y - collidableEntity->mPosition.y);
@@ -81,12 +77,10 @@ void Entity::checkCollisionX(Entity *collidableEntities, int collisionCheckCount
             if (mVelocity.x > 0) {
                 mPosition.x     -= xOverlap;
                 mVelocity.x      = 0;
-
                 mIsCollidingRight = true;
             } else if (mVelocity.x < 0) {
                 mPosition.x    += xOverlap;
                 mVelocity.x     = 0;
- 
                 mIsCollidingLeft = true;
             }
         }
@@ -272,7 +266,8 @@ void Entity::AIActivate(Entity *target)
     }
 }
 
-void Entity::update(float deltaTime, Entity *player, Map *map, Entity *collidableEntities, int collisionCheckCount) {
+void Entity::update(float deltaTime, Entity *player, Map *map, const std::vector<Entity*>& collidableEntities) 
+{
     if (mEntityStatus == INACTIVE) return;
 
     if (mEntityType == NPC) AIActivate(player);
@@ -284,12 +279,14 @@ void Entity::update(float deltaTime, Entity *player, Map *map, Entity *collidabl
     mVelocity.y = mMovement.y * mSpeed;
     mVelocity.y += mAcceleration.y * deltaTime;
 
+    // Update Y and check Vector collision
     mPosition.y += mVelocity.y * deltaTime;
-    checkCollisionY(collidableEntities, collisionCheckCount);
+    checkCollisionY(collidableEntities);
     checkCollisionY(map);
 
+    // Update X and check Vector collision
     mPosition.x += mVelocity.x * deltaTime;
-    checkCollisionX(collidableEntities, collisionCheckCount);
+    checkCollisionX(collidableEntities);
     checkCollisionX(map);
 
     // direction decision
@@ -346,10 +343,29 @@ void Entity::render()
         static_cast<float>(mScale.y)
     };
 
-    Vector2 originOffset = {
-        static_cast<float>(mScale.x) / 2.0f,
-        static_cast<float>(mScale.y) / 2.0f
-    };
+    Vector2 originOffset;
+
+    if (mEntityType == PROP) {
+        // For Trees/Rocks: Position is at the bottom-center (Feet)
+        // We shift the drawing UP so the sprite stands on top of the collision box.
+        originOffset = {
+            static_cast<float>(mScale.x) / 2.0f, 
+            static_cast<float>(mScale.y) - (mColliderDimensions.y / 2.0f) // Shift Up
+        };
+    } else if (mEntityType == COLLECTIBLE) {
+        // For Trees/Rocks: Position is at the bottom-center (Feet)
+        // We shift the drawing UP so the sprite stands on top of the collision box.
+        originOffset = {
+            static_cast<float>(mScale.x),
+            static_cast<float>(mScale.y)
+        };
+    } else {
+        // For Player/NPCs: Center-Center
+        originOffset = {
+            static_cast<float>(mScale.x) / 2.0f,
+            static_cast<float>(mScale.y) / 2.0f + (mColliderDimensions.y)
+        };
+    }
 
     DrawTexturePro(
         mTexture, 
@@ -377,4 +393,70 @@ void Entity::displayCollider()
         colliderBox.height,
         GREEN
     );
+}
+
+void Entity::sellItems()
+{
+    if (mInventory.empty()) return;
+
+    int totalValue = 0;
+    for (const auto& item : mInventory) {
+        totalValue += item.value;
+    }
+
+    mMoney += totalValue;
+    mInventory.clear();
+
+    std::cout << "Sold items for $" << totalValue << ". Total: $" << mMoney << std::endl;
+}
+
+void Entity::interact(std::vector<Entity*>& worldEntities)
+{
+    Vector2 probe = mPosition;
+    float reach = 10.0f; // How far away can we grab?
+
+    if (mDirection == LEFT)  probe.x -= reach;
+    if (mDirection == RIGHT) probe.x += reach;
+    
+    for (auto it = worldEntities.begin(); it != worldEntities.end(); )
+    {
+        Entity* e = *it;
+
+        if (e == this) {
+            ++it; 
+            continue;
+        }
+
+        Rectangle targetRect = {
+            e->getPosition().x - e->getColliderDimensions().x/2,
+            e->getPosition().y - e->getColliderDimensions().y/2,
+            e->getColliderDimensions().x,
+            e->getColliderDimensions().y
+        };
+
+        if (CheckCollisionPointRec(probe, targetRect))
+        {
+            if (e->getEntityType() == PROP && e->getScale().y > 32) // Rough check for tree vs rock
+            {
+                Entity* apple = new Entity(
+                    {e->getPosition().x, e->getPosition().y + 15.0f}, 
+                    {10.0f, 10.0f},
+                    "assets/game/apple.png", 
+                    COLLECTIBLE
+                );
+                apple->setColliderDimensions({8.0f, 8.0f});
+                worldEntities.push_back(apple);
+                break; 
+            }
+
+            else if (e->getEntityType() == COLLECTIBLE)
+            {
+                mInventory.push_back({ ITEM_APPLE, 10 });
+                delete e;
+                it = worldEntities.erase(it);
+                break;
+            }
+        }
+        ++it;
+    }
 }

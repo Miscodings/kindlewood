@@ -5,13 +5,25 @@
 
 enum Direction    { LEFT, RIGHT, UP, DOWN              };
 enum EntityStatus { ACTIVE, INACTIVE                   };
-enum EntityType   { PLAYER, BLOCK, PLATFORM, NPC, NONE };
+enum EntityType   { PLAYER, BLOCK, PLATFORM, NPC, PROP, COLLECTIBLE, NONE };
 enum AIType       { WANDERER, FOLLOWER, VERTICAL_FLYER };
 enum AIState      { WALKING, IDLE, FOLLOWING           };
+
+enum ItemType { ITEM_NONE, ITEM_APPLE, ITEM_GEM };
+
+struct Item {
+    ItemType type;
+    int value;
+};
 
 class Entity
 {
 private:
+
+    int mMoney = 0;
+    std::vector<Item> mInventory;
+    std::string mDialogueText = "...";
+
     Vector2 mPosition;
     Vector2 mMovement;
     Vector2 mVelocity;
@@ -48,11 +60,10 @@ private:
 
     bool isColliding(Entity *other) const;
 
-    void checkCollisionY(Entity *collidableEntities, int collisionCheckCount);
-    void checkCollisionY(Map *map);
-
-    void checkCollisionX(Entity *collidableEntities, int collisionCheckCount);
+    void checkCollisionY(const std::vector<Entity*>& collidableEntities);
+    void checkCollisionX(const std::vector<Entity*>& collidableEntities);
     void checkCollisionX(Map *map);
+    void checkCollisionY(Map *map);
     
     void resetColliderFlags() 
     {
@@ -69,7 +80,7 @@ private:
 
 public:
     static constexpr int   DEFAULT_SIZE          = 250;
-    static constexpr int   DEFAULT_SPEED         = 200;
+    static constexpr int   DEFAULT_SPEED         = 100;
     static constexpr int   DEFAULT_FRAME_SPEED   = 14;
     static constexpr float Y_COLLISION_THRESHOLD = 0.5f;
 
@@ -83,7 +94,7 @@ public:
     ~Entity();
 
     void update(float deltaTime, Entity *player, Map *map, 
-        Entity *collidableEntities, int collisionCheckCount);
+        const std::vector<Entity*>& collidableEntities); 
 
         
     void updateAnimationOnly(float deltaTime) { animate(deltaTime); }
@@ -109,7 +120,7 @@ public:
     Vector2     getVelocity()              const { return mVelocity;              }
     Vector2     getAcceleration()          const { return mAcceleration;          }
     Vector2     getScale()                 const { return mScale;                 }
-    Vector2     getColliderDimensions()    const { return mScale;                 }
+    Vector2     getColliderDimensions()    const { return mColliderDimensions;    }
     Vector2     getSpriteSheetDimensions() const { return mSpriteSheetDimensions; }
     Texture2D   getTexture()               const { return mTexture;               }
     TextureType getTextureType()           const { return mTextureType;           }
@@ -159,6 +170,16 @@ public:
         { mAIState = newState;                     }
     void setAIType(AIType newType)
         { mAIType = newType;                       }
+
+    void interact(std::vector<Entity*>& worldEntities); 
+    void sellItems();
+    
+    int getMoney() const { return mMoney; }
+    int getInventorySize() const { return mInventory.size(); }
+    
+    void setDialogue(std::string text) { mDialogueText = text; }
+    std::string getDialogue() const { return mDialogueText; }
+    
 };
 
 #endif

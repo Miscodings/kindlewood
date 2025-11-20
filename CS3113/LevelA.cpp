@@ -1,4 +1,5 @@
 #include "LevelA.h"
+#include <algorithm>
 
 LevelA::LevelA()                                      : Scene { {0.0f}, nullptr   } {}
 LevelA::LevelA(Vector2 origin, const char *bgHexCode) : Scene { origin, bgHexCode } {}
@@ -27,13 +28,56 @@ void LevelA::initialise()
    mGameState.goalSound = LoadSound("assets/game/goal.ogg");
 
    mGameState.map = new Map(
-      LEVEL_WIDTH, LEVEL_HEIGHT,   // map grid cols & rows
-      (unsigned int *) mLevelData, // grid data
-      "assets/game/tileset.png",     // texture filepath
-      TILE_DIMENSION,              // tile size
-      24, 25,                       // texture cols & rows
-      mOrigin                      // in-game origin
+      LEVEL_WIDTH, LEVEL_HEIGHT,   
+      TILE_DIMENSION,              
+      mOrigin                      
    );
+
+   int groundStart  = 1;
+   int waterStart   = 1000;
+   int roadStart    = 2000;
+   int flowerStart  = 3000;
+   int flowerWhiteStart = 3500;
+
+   mGameState.map->addTileset("assets/game/Tileset_Ground.png",            groundStart); 
+   mGameState.map->addTileset("assets/game/Tileset_Water.png",             waterStart);
+   mGameState.map->addTileset("assets/game/Tilesets_Road.png",             roadStart);
+   mGameState.map->addTileset("assets/game/Animation_Flowers_Red.png",     flowerStart);
+   mGameState.map->addTileset("assets/game/Animation_Flowers_White.png",   flowerWhiteStart);
+
+   for(unsigned int &id : mDataGround) {
+      if (id != 0) {
+         id += 1;
+      }
+   }
+
+   for(unsigned int &id : mDataWater) {
+      if (id == 173) { id = 0; }
+      else if (id != 0) {
+         id += (waterStart - 1);
+         id += 1;
+      }
+   }
+
+   for(unsigned int &id : mDataRoad) {
+      if (id == 47) { id = 0; }
+      else if (id != 0) {
+         id += (roadStart - 1);
+         id += 1;
+      }
+   }
+
+   for(unsigned int &id : mDataFlowers) {
+      if (id != 0) {
+         id += (flowerStart - 1);
+         id += 1;
+      }
+   }
+   
+   mGameState.map->addLayer(mDataGround, false); 
+   mGameState.map->addLayer(mDataWater, true);
+   mGameState.map->addLayer(mDataRoad, false);
+   mGameState.map->addLayer(mDataFlowers, false);
 
    std::map<Direction, std::vector<int>> playerAnimationAtlas = {
       {RIGHT,  { 0,  1, 2, 3 }},
@@ -41,72 +85,91 @@ void LevelA::initialise()
    };
 
    mGameState.player = new Entity(
-      {mOrigin.x - 1050.0f, mOrigin.y - 10.0f}, // position
-      {250.0f * 0.8f, 250.0f * 0.6f},           // scale
-      "assets/game/sprites.png",                // texture file address
-      ATLAS,                                    // single image or atlas?
-      { 6, 8 },                                 // atlas dimensions
-      playerAnimationAtlas,                    // actual atlas
-      PLAYER                                    // entity type
+      {mOrigin.x + 30.0f, mOrigin.y + 30.0f},   // Spawn position
+      {32.0f, 32.0f},                           // Scale (32px is 2 tiles wide)
+      "assets/game/sprites.png",                // Texture
+      ATLAS,                                    
+      { 6, 8 },                                 
+      playerAnimationAtlas,                    
+      PLAYER                                    
    );
    
-   float sizeRatio  = 48.0f / 64.0f;
-
-   // std::map<Direction, std::vector<int>> boarAnimationAtlas = {
-   //    {LEFT,  { 0, 1, 2, 3, 4, 5 }},
-   //    {RIGHT, { 6, 7, 8, 9, 10, 11 }},
-   // };
-
-   // std::vector<Vector2> entityPositions = {
-   //    {mOrigin.x - 425.0f, mOrigin.y - 10.0f}
-   // };
-
-   // for (auto& pos : entityPositions) {
-   //    Entity* boar = new Entity(
-   //       pos,
-   //       {250.0f * 0.5f, 250.0f * 0.35f},
-   //       "assets/game/boar_walk.png",
-   //       ATLAS,
-   //       {2, 6},
-   //       boarAnimationAtlas,
-   //       NPC
-   //    );
-   //    boar->setAIType(WANDERER);
-   //    boar->setAIState(WALKING);
-   //    boar->setColliderDimensions({
-   //       boar->getScale().x / 4.5f,
-   //       boar->getScale().y / 1.3f
-   //    });
-
-   //    mGameState.entities.push_back(boar);
-   // }
-
    mGameState.player->setColliderDimensions({
-      mGameState.player->getScale().x / 4.5f,
-      mGameState.player->getScale().y / 1.5f
+      mGameState.player->getScale().x / 4.0f,
+      mGameState.player->getScale().y / 3.5f
    });
-   
 
-   mGameState.camera = { 0 };                                    // zero initialize
-   mGameState.camera.target = mGameState.player->getPosition(); // camera follows player
-   mGameState.camera.offset = mOrigin;                           // camera offset to center of screen
-   mGameState.camera.rotation = 0.0f;                            // no rotation
-   mGameState.camera.zoom = 1.0f;                                // default zoom
+   buildForest();
+   buildVillage();
+
+   mGameState.camera = { 0 };                                     
+   mGameState.camera.target = mGameState.player->getPosition();   
+   mGameState.camera.offset = mOrigin;                            
+   mGameState.camera.rotation = 0.0f;                             
+   mGameState.camera.zoom = 4.0f;                                 
 }
 
 void LevelA::update(float deltaTime)
 {
    UpdateMusicStream(mGameState.bgm);
    
-   mGameState.player->update(deltaTime, nullptr, nullptr, nullptr, 0);
-
-   for (auto& entity : mGameState.entities) {
-      entity->update(deltaTime, mGameState.player, nullptr, nullptr, 0);
+   if (mIsChatting) 
+   {
+        // If player presses E or Space, close the chat
+      if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
+         mIsChatting = false;
+      }
+      return; // SKIP THE REST (Freezes physics/movement)
    }
 
-   Vector2 currentPlayerPosition = mGameState.player->getPosition();
+   // 1. PHYSICS UPDATE
+   // Pass the map so tile collision happens
+   mGameState.player->update(deltaTime, mGameState.player, mGameState.map, mGameState.entities);
 
-   panCamera(&mGameState.camera, &currentPlayerPosition);
+   for (auto& entity : mGameState.entities) {
+      entity->update(deltaTime, mGameState.player, mGameState.map, mGameState.entities);
+   }
+
+   // 2. HARD BOUNDARY CLAMP (Stops you walking off)
+   // -----------------------------------------------------
+   Vector2 pos = mGameState.player->getPosition();
+   Vector2 col = mGameState.player->getColliderDimensions();
+
+   // Get Map Limits
+   float mapLeft   = mGameState.map->getLeftBoundary();
+   float mapRight  = mGameState.map->getRightBoundary();
+   float mapTop    = mGameState.map->getTopBoundary();
+   float mapBottom = mGameState.map->getBottomBoundary();
+
+   // Check Left/Right (Use half-width of collider to stop at edge)
+   if (pos.x - (col.x / 2.0f) < mapLeft)   pos.x = mapLeft + (col.x / 2.0f);
+   if (pos.x + (col.x / 2.0f) > mapRight)  pos.x = mapRight - (col.x / 2.0f);
+
+   // Check Top/Bottom
+   if (pos.y - (col.y / 2.0f) < mapTop)    pos.y = mapTop + (col.y / 2.0f);
+   if (pos.y + (col.y / 2.0f) > mapBottom) pos.y = mapBottom - (col.y / 2.0f);
+
+   // Apply fixed position
+   mGameState.player->setPosition(pos);
+   // -----------------------------------------------------
+
+
+   // 3. CAMERA LOGIC
+   Vector2 currentPlayerPosition = mGameState.player->getPosition();
+   float screenWidth = GetScreenWidth() / mGameState.camera.zoom;
+   float screenHeight = GetScreenHeight() / mGameState.camera.zoom;
+
+   float minX = mapLeft + screenWidth / 2.0f;
+   float maxX = mapRight - screenWidth / 2.0f;
+   float minY = mapTop + screenHeight / 2.0f;
+   float maxY = mapBottom - screenHeight / 2.0f;
+
+   // Prevent camera from inverting if screen is bigger than map
+   if (minX > maxX) minX = maxX = (mapLeft + mapRight) / 2.0f;
+   if (minY > maxY) minY = maxY = (mapTop + mapBottom) / 2.0f;
+
+   mGameState.camera.target.x = fmaxf(minX, fminf(currentPlayerPosition.x, maxX));
+   mGameState.camera.target.y = fmaxf(minY, fminf(currentPlayerPosition.y, maxY));
 }
 
 void LevelA::render()
@@ -114,13 +177,31 @@ void LevelA::render()
    ClearBackground(ColorFromHex(mBGColourHexCode));
    BeginMode2D(mGameState.camera);
 
-   mGameState.map->render();
-   mGameState.player->render();
+   if (mGameState.map) mGameState.map->render();
+   
+   std::vector<Entity*> renderQueue;
+   if (mGameState.player) renderQueue.push_back(mGameState.player);
    for (auto& entity : mGameState.entities) {
-      entity->render();
+       renderQueue.push_back(entity);
+   }
+   
+   std::sort(renderQueue.begin(), renderQueue.end(), [](Entity* a, Entity* b) {
+       return a->getPosition().y < b->getPosition().y;
+   });
+   
+   for (Entity* e : renderQueue) {
+       e->render();
+       e->displayCollider();
    }
 
    EndMode2D();
+
+   int money = mGameState.player->getMoney();
+   int bagSize = mGameState.player->getInventorySize();
+
+   DrawText(TextFormat("Money: $%d", money), 20, 20, 30, GOLD);
+   DrawText(TextFormat("Bag: %d Items", bagSize), 20, 60, 20, WHITE);
+
 }
 
 void LevelA::shutdown()
@@ -129,4 +210,98 @@ void LevelA::shutdown()
    UnloadSound(mGameState.jumpSound);
    UnloadSound(mGameState.hurtSound);
    UnloadSound(mGameState.goalSound);
+}
+
+void LevelA::buildForest()
+{
+    float mapX = mGameState.map->getLeftBoundary();
+    float mapY = mGameState.map->getTopBoundary();
+
+    std::vector<Vector2> treePositions = {
+        {50, 35}, {90, 25}, {130, 30}, {170, 25}, {210, 31}, {250, 28}, {290, 30}, {330, 37}, {370, 23}, {410, 40},
+    };
+
+    std::vector<Vector2> rockPositions = {
+        {300, 300}, {450, 200}, {50, 500}
+    };
+
+    for (Vector2 pos : treePositions) {
+         int variant = GetRandomValue(1, 4); 
+         const char* path = TextFormat("assets/game/tree_%d.png", variant);
+
+         Entity* tree = new Entity(
+            {mapX + pos.x, mapY + pos.y},   // Spawn position
+            {32.0f, 48.0f},                           // Scale
+            path,          // Texture
+            PROP
+         );
+         tree->setColliderDimensions({10.0f, 20.0f}); 
+         mGameState.entities.push_back(tree);
+    }
+
+    for (Vector2 pos : rockPositions) {
+        int variant = GetRandomValue(1, 5);
+        const char* path = TextFormat("assets/game/rock_%d.png", variant);
+
+        Entity* rock = new Entity(
+            {mapX + pos.x, mapY + pos.y},
+            {16.0f, 16.0f},
+            path,
+            PROP
+        );
+        rock->setColliderDimensions({12.0f, 12.0f});
+        mGameState.entities.push_back(rock);
+    }
+}
+
+void LevelA::buildVillage()
+{
+    float mapX = mGameState.map->getLeftBoundary();
+    float mapY = mGameState.map->getTopBoundary();
+
+    std::vector<Vector2> housePositions = {
+        {200, 200}, // Player's House?
+        {400, 350}, // Neighbor 1
+        {550, 150}  // Shop?
+    };
+
+    for (Vector2 pos : housePositions) {
+        Entity* house = new Entity(
+            {mapX + pos.x, mapY + pos.y},
+            {80.0f, 80.0f},
+            "assets/game/house_1.png",
+            PROP
+        );
+
+        house->setColliderDimensions({60.0f, 40.0f}); 
+        
+        mGameState.entities.push_back(house);
+    }
+}
+
+void LevelA::spawnNPCs()
+{
+    float mapX = mGameState.map->getLeftBoundary();
+    float mapY = mGameState.map->getTopBoundary();
+
+    std::map<Direction, std::vector<int>> npcAnim = {
+        {LEFT, { 0, 1, 2, 3 }},
+        {RIGHT, { 6, 7, 8, 9 }}
+    };
+
+    // Create NPC "Bob"
+    Entity* bob = new Entity(
+        {mapX + 300, mapY + 300},
+        {32.0f, 32.0f},
+        "assets/game/boar_walk.png", // Or "npc_1.png"
+        ATLAS, {2, 6}, npcAnim,
+        NPC
+    );
+    
+    bob->setColliderDimensions({10.0f, 10.0f});
+    bob->setAIType(WANDERER);
+    bob->setAIState(WALKING);
+    bob->setDialogue("Welcome to Kindlewood! Watch out for bees.");
+    
+    mGameState.entities.push_back(bob);
 }

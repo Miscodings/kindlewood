@@ -14,12 +14,9 @@ void Level0::initialise()
    PlayMusicStream(mGameState.bgm);
 
    mGameState.map = new Map(
-      LEVEL_WIDTH, LEVEL_HEIGHT,
-      (unsigned int *) mLevelData,
-      "assets/game/grass.png",
-      TILE_DIMENSION,
-      9, 18,
-      mOrigin
+      16, 16,
+      16.0f,
+      mOrigin   
    );
 }
 

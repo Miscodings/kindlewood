@@ -35,7 +35,7 @@ public:
     virtual void render() = 0;
     virtual void shutdown() = 0;
     
-    GameState   getState()           const { return mGameState; }
+    GameState& getState()                  { return mGameState; }
     Vector2     getOrigin()          const { return mOrigin;    }
     const char* getBGColourHexCode() const { return mBGColourHexCode; }
 };
