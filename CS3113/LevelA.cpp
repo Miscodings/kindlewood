@@ -105,6 +105,8 @@ void LevelA::initialise()
       mGameState.player->getScale().y / 3.5f
    });
 
+   mGameState.player->setPosition({268, 105});
+
    buildForest();
    buildVillage();
    spawnNPCs();
@@ -194,23 +196,24 @@ void LevelA::render()
    BeginMode2D(mGameState.camera);
 
    if (mGameState.map) mGameState.map->render();
-   
+
    std::vector<Entity*> renderQueue;
    if (mGameState.player) renderQueue.push_back(mGameState.player);
    for (auto& entity : mGameState.entities) {
-       renderQueue.push_back(entity);
+         renderQueue.push_back(entity);
    }
-   
+
    std::sort(renderQueue.begin(), renderQueue.end(), [](Entity* a, Entity* b) {
-       return a->getPosition().y < b->getPosition().y;
+         return a->getPosition().y < b->getPosition().y;
    });
-   
+
    for (Entity* e : renderQueue) {
-       e->render();
-       e->displayCollider();
+         e->render();
+         e->displayCollider();
    }
 
    EndMode2D();
+   EndShaderMode();
 
    int money = mGameState.player->getMoney();
    int bagSize = mGameState.player->getInventorySize();
@@ -228,11 +231,26 @@ void LevelA::render()
 
    if (mIsChatting)
    {
-       DrawRectangle(50, 450, 900, 130, Fade(BLACK, 0.8f));
-       DrawRectangleLines(50, 450, 900, 130, WHITE);
-       DrawText("Bob", 70, 460, 20, YELLOW);
-       DrawText(mCurrentChatText.c_str(), 70, 490, 24, WHITE);
-       DrawText(">>", 900, 550, 20, (int)GetTime() % 2 == 0 ? WHITE : GRAY);
+      DrawRectangle(50, 450, 900, 130, Fade(BLACK, 0.8f));
+      DrawRectangleLines(50, 450, 900, 130, WHITE);
+
+      std::string speakerName = "";
+      std::string messageContent = mCurrentChatText;
+      
+      size_t splitPosition = mCurrentChatText.find('|');
+
+      if (splitPosition != std::string::npos) {
+         speakerName    = mCurrentChatText.substr(0, splitPosition);
+         messageContent = mCurrentChatText.substr(splitPosition + 1);
+      }
+
+      if (!speakerName.empty()) {
+         DrawText(speakerName.c_str(), 70, 460, 20, YELLOW);
+      }
+
+      DrawText(messageContent.c_str(), 70, 490, 24, WHITE);
+
+      DrawText(">>", 900, 550, 20, (int)GetTime() % 2 == 0 ? WHITE : GRAY);
    }
 }
 
@@ -347,57 +365,56 @@ void LevelA::buildVillage()
 
 void LevelA::spawnNPCs()
 {
-    float mapX = mGameState.map->getLeftBoundary();
-    float mapY = mGameState.map->getTopBoundary();
+   float mapX = mGameState.map->getLeftBoundary();
+   float mapY = mGameState.map->getTopBoundary();
 
-    std::map<Direction, std::vector<int>> npcAnim = {
-        {LEFT, { 0, 1, 2, 3 }},
-        {RIGHT, { 6, 7, 8, 9 }}
-    };
+   std::map<Direction, std::vector<int>> npcAnim = {
+      {LEFT, { 0, 1, 2, 3 }},
+      {RIGHT, { 6, 7, 8, 9 }}
+   };
 
-    // Create NPC "Bob"
-    Entity* bob = new Entity(
-        {mapX + 300, mapY + 300},
-        {32.0f, 32.0f},
-        "assets/game/boar_walk.png", // Or "npc_1.png"
-        ATLAS, {2, 6}, npcAnim,
-        NPC
-    );
-    
-    bob->setColliderDimensions({10.0f, 10.0f});
-    bob->setAIType(WANDERER);
-    bob->setAIState(WALKING);
-    bob->setDialogue("Welcome to Kindlewood! Watch out for bees.");
-    
-    mGameState.entities.push_back(bob);
+   Entity* bob = new Entity(
+      {mapX + 300, mapY + 300},
+      {32.0f, 32.0f},
+      "assets/game/boar_walk.png",
+      ATLAS, {2, 6}, npcAnim,
+      NPC
+   );
+   
+   bob->setColliderDimensions({10.0f, 10.0f});
+   bob->setAIType(WANDERER);
+   bob->setAIState(WALKING);
+   bob->setDialogue("Bob|Welcome to Kindlewood! Watch out for bees.");
+   
+   mGameState.entities.push_back(bob);
 }
 
 void LevelA::spawnBug()
 {
-    float mapWidth = mGameState.map->getRightBoundary();
-    float mapHeight = mGameState.map->getBottomBoundary();
+   float mapWidth = mGameState.map->getRightBoundary();
+   float mapHeight = mGameState.map->getBottomBoundary();
 
-    float randX = (float)GetRandomValue(100, (int)mapWidth - 100);
-    float randY = (float)GetRandomValue(100, (int)mapHeight - 100);
+   float randX = (float)GetRandomValue(100, (int)mapWidth - 100);
+   float randY = (float)GetRandomValue(100, (int)mapHeight - 100);
 
-    std::map<Direction, std::vector<int>> bugAnims = {
-       {LEFT,       {0, 1, 2}}, {RIGHT,      {0, 1, 2}},
-       {UP,         {0, 1, 2}}, {DOWN,       {0, 1, 2}},
-       {LEFT_WALK,  {0, 1, 2}}, {RIGHT_WALK, {0, 1, 2}},
-       {UP_WALK,    {0, 1, 2}}, {DOWN_WALK,  {0, 1, 2}}
-    };
+   std::map<Direction, std::vector<int>> bugAnims = {
+      {LEFT,       {0, 1, 2}}, {RIGHT,      {0, 1, 2}},
+      {UP,         {0, 1, 2}}, {DOWN,       {0, 1, 2}},
+      {LEFT_WALK,  {0, 1, 2}}, {RIGHT_WALK, {0, 1, 2}},
+      {UP_WALK,    {0, 1, 2}}, {DOWN_WALK,  {0, 1, 2}}
+   };
 
-    Entity* bug = new Entity(
-       {randX, randY}, 
-       {16.0f, 16.0f}, 
-       "assets/game/butterfly.png", 
-       ATLAS, {8, 3}, bugAnims, BUG
-    );
+   Entity* bug = new Entity(
+      {randX, randY}, 
+      {16.0f, 16.0f}, 
+      "assets/game/butterfly.png", 
+      ATLAS, {8, 3}, bugAnims, BUG
+   );
 
-    bug->setFrameSpeed(10);
-    bug->setColliderDimensions({10,10});
-    bug->setAIType(WANDERER);
-    bug->setSpeed(40);
-    
-    mGameState.entities.push_back(bug);
+   bug->setFrameSpeed(10);
+   bug->setColliderDimensions({10,10});
+   bug->setAIType(WANDERER);
+   bug->setSpeed(40);
+   
+   mGameState.entities.push_back(bug);
 }
