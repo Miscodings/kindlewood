@@ -25,7 +25,7 @@ void Level0::update(float deltaTime)
    UpdateMusicStream(mGameState.bgm);
 
    if (IsKeyPressed(KEY_ENTER)) {
-       mGameState.nextSceneID = 1;
+       mGameState.nextSceneID = 2;
    }
 }
 

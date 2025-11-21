@@ -9,7 +9,7 @@ Entity::Entity()
       mTexture {0}, mTextureType {SINGLE}, mAngle {0.0f},
       mSpriteSheetDimensions {0.0f, 0.0f}, mDirection {RIGHT}, 
       mAnimationAtlas {{}}, mAnimationIndices {}, mFrameSpeed {0},
-      mEntityType {NONE}, mAIStateTime{0.0f}, mAIStateDuration{2.0f}
+      mEntityType {MISC}, mAIStateTime{0.0f}, mAIStateDuration{2.0f}
 { 
 }
 

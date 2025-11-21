@@ -5,7 +5,7 @@
 
 enum Direction    { LEFT, RIGHT, UP, DOWN, LEFT_WALK, RIGHT_WALK, UP_WALK, DOWN_WALK };
 enum EntityStatus { ACTIVE, INACTIVE                                      };
-enum EntityType   { PLAYER, BLOCK, PLATFORM, NPC, PROP, COLLECTIBLE, BUG, FISH, NONE };
+enum EntityType   { PLAYER, BLOCK, PLATFORM, NPC, PROP, COLLECTIBLE, BUG, FISH, MISC };
 enum AIType       { WANDERER, FOLLOWER, VERTICAL_FLYER                    };
 enum AIState      { WALKING, IDLE, FOLLOWING                              };
 enum ToolType { TOOL_NONE, TOOL_NET, TOOL_AXE, TOOL_ROD };

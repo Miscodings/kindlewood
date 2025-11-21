@@ -1,5 +1,8 @@
 #include "CS3113/Level0.h"
 #include "CS3113/LevelA.h"
+#include "CS3113/IntroScene.h"
+#include "CS3113/ShaderProgram.h"
+#include "CS3113/Effects.h"
 
 // Global Constants
 constexpr int SCREEN_WIDTH     = 1000,
@@ -18,6 +21,13 @@ std::vector<Scene*> gLevels;
 
 Level0 *gLevel0 = nullptr;
 LevelA *gLevelA = nullptr;
+IntroScene *gIntroScene = nullptr;
+
+bool gIsTransitioning = false;
+
+Effects *gEffects = nullptr;
+ShaderProgram gShader;
+Vector2 gLightPosition = { 0.0f, 0.0f };
 
 // Function Declarations
 void switchToScene(Scene *scene);
@@ -39,17 +49,23 @@ void switchToScene(Scene *scene)
 
 void initialise()
 {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Scenes");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Kindlewood Sanctuary"); // Cute Title!
     InitAudioDevice();
 
-    // --- Create scene objects ---
-    gLevel0 = new Level0(ORIGIN, "#76b6ff");
-    gLevelA = new LevelA(ORIGIN, "#76b6ff");
+    gShader.load("shaders/vertex.glsl", "shaders/fragment.glsl");
 
+    gIntroScene = new IntroScene(ORIGIN, "#000000ff");
+    gLevel0 = new Level0(ORIGIN, "#76b6ff");
+    gLevelA     = new LevelA(ORIGIN, "#76b6ff"); 
+
+    gLevels.push_back(gIntroScene);
     gLevels.push_back(gLevel0);
     gLevels.push_back(gLevelA);
 
     switchToScene(gLevels[0]);
+
+    gEffects = new Effects(ORIGIN, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
+    gEffects->start(FADEIN); // Fade into the intro
 
     SetTargetFPS(FPS);
 }
@@ -57,6 +73,7 @@ void initialise()
 void processInput() 
 {
     if (!gCurrentScene) return;
+    if (gIsTransitioning) return; 
 
     if (gCurrentScene->isChatting()) 
     {
@@ -106,7 +123,31 @@ void update()
 
     while (gTimeAccumulator >= FIXED_TIMESTEP)
     {
-        gCurrentScene->update(FIXED_TIMESTEP);
+        if (gCurrentScene) {
+            gCurrentScene->update(FIXED_TIMESTEP);
+            
+            if (gCurrentScene->getState().player) {
+                gLightPosition = gCurrentScene->getState().player->getPosition();
+            }
+        }
+        
+        if (gEffects) gEffects->update(FIXED_TIMESTEP, nullptr);
+        if (gCurrentScene && gCurrentScene->getState().nextSceneID != -1)
+        {
+            if (!gIsTransitioning) {
+                gEffects->start(FADEOUT);
+                gIsTransitioning = true;
+            }
+            else if (gEffects->getCurrentEffect() == NONE && gEffects->getAlpha() >= 1.0f) {
+                int id = gCurrentScene->getState().nextSceneID;
+                if (id >= 0 && id < gLevels.size()) {
+                    switchToScene(gLevels[id]);
+                }
+                gEffects->start(FADEIN);
+                gIsTransitioning = false;
+            }
+        }
+
         gTimeAccumulator -= FIXED_TIMESTEP;
     }
 }
@@ -114,9 +155,18 @@ void update()
 void render()
 {
     BeginDrawing();
+    bool applyShader = (gCurrentScene != gIntroScene && gCurrentScene != gLevel0);
+    if (applyShader) {
+        gShader.begin();
+        gShader.setVector2("lightPosition", gLightPosition);
+    }
     if (gCurrentScene) {
         gCurrentScene->render();
     }
+    if (applyShader) {
+        gShader.end();
+    }
+    if (gEffects) gEffects->render();
     EndDrawing();
 }
 
@@ -126,6 +176,11 @@ void shutdown()
         delete scene;
     }
     gLevels.clear();
+
+    delete gEffects;
+    gEffects = nullptr;
+
+    gShader.unload();
 
     CloseAudioDevice();
     CloseWindow();
