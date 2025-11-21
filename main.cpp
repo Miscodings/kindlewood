@@ -58,19 +58,39 @@ void processInput()
 {
     if (!gCurrentScene) return;
 
-    if (gCurrentScene->getState().player) 
+    if (gCurrentScene->isChatting()) 
     {
-        gCurrentScene->getState().player->resetMovement();
-
-        if      (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) gCurrentScene->getState().player->moveLeft();
-        else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) gCurrentScene->getState().player->moveRight();
-        if      (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) gCurrentScene->getState().player->moveUp();
-        else if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) gCurrentScene->getState().player->moveDown();
-
-        if (IsKeyPressed(KEY_E)) gCurrentScene->getState().player->interact(gCurrentScene->getState().entities);
-        if (IsKeyPressed(KEY_Q)) gCurrentScene->getState().player->sellItems();
+        if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
+            gCurrentScene->stopChat();
+        }
+        return;
     }
 
+    if (gCurrentScene->getState().player) 
+    {
+        Entity* player = gCurrentScene->getState().player;
+        player->resetMovement();
+
+        // Movement
+        if      (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))  player->moveLeft();
+        else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) player->moveRight();
+        if      (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))    player->moveUp();
+        else if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))  player->moveDown();
+
+        if (IsKeyPressed(KEY_TAB)) {
+            player->cycleTool();
+        }
+
+        if (IsKeyPressed(KEY_SPACE)) {
+            std::string actionResult = player->useTool(gCurrentScene->getState().entities);
+            if (!actionResult.empty()) gCurrentScene->setChat(actionResult);
+            else {
+                std::string dialogue = player->interact(gCurrentScene->getState().entities);
+                if (!dialogue.empty()) gCurrentScene->setChat(dialogue);
+            }
+        }
+        if (IsKeyPressed(KEY_P)) player->sellItems();
+    }
     if (IsKeyPressed(KEY_F) || WindowShouldClose()) gAppStatus = TERMINATED;
 }
 

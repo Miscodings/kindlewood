@@ -11,6 +11,9 @@ public:
 private:
     void buildForest();
     void buildVillage();
+    void spawnNPCs();
+    void spawnBug();
+    float mBugRespawnTimer = 0.0f;
     
     bool mIsChatting = false;
     std::string mCurrentChatText = "";
@@ -195,6 +198,14 @@ public:
     LevelA(Vector2 origin, const char *bgHexCode);
     ~LevelA();
     
+    void setChat(const std::string& text) override {
+        mIsChatting = true;
+        mCurrentChatText = text;
+    }
+    
+    bool isChatting() override { return mIsChatting; }
+    void stopChat() override { mIsChatting = false; }
+
     void initialise() override;
     void update(float deltaTime) override;
     void render() override;

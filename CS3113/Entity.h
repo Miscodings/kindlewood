@@ -3,13 +3,13 @@
 
 #include "Map.h"
 
-enum Direction    { LEFT, RIGHT, UP, DOWN              };
-enum EntityStatus { ACTIVE, INACTIVE                   };
-enum EntityType   { PLAYER, BLOCK, PLATFORM, NPC, PROP, COLLECTIBLE, NONE };
-enum AIType       { WANDERER, FOLLOWER, VERTICAL_FLYER };
-enum AIState      { WALKING, IDLE, FOLLOWING           };
-
-enum ItemType { ITEM_NONE, ITEM_APPLE, ITEM_GEM };
+enum Direction    { LEFT, RIGHT, UP, DOWN, LEFT_WALK, RIGHT_WALK, UP_WALK, DOWN_WALK };
+enum EntityStatus { ACTIVE, INACTIVE                                      };
+enum EntityType   { PLAYER, BLOCK, PLATFORM, NPC, PROP, COLLECTIBLE, BUG, FISH, NONE };
+enum AIType       { WANDERER, FOLLOWER, VERTICAL_FLYER                    };
+enum AIState      { WALKING, IDLE, FOLLOWING                              };
+enum ToolType { TOOL_NONE, TOOL_NET, TOOL_AXE, TOOL_ROD };
+enum ItemType { ITEM_NONE, ITEM_APPLE, ITEM_GEM, ITEM_BUTTERFLY, ITEM_BASS };
 
 struct Item {
     ItemType type;
@@ -23,6 +23,7 @@ private:
     int mMoney = 0;
     std::vector<Item> mInventory;
     std::string mDialogueText = "...";
+    ToolType mEquippedTool = TOOL_NONE;
 
     Vector2 mPosition;
     Vector2 mMovement;
@@ -57,6 +58,8 @@ private:
 
     AIType  mAIType;
     AIState mAIState;
+    float mAIStateTime = 0.0f;
+    float mAIStateDuration = 2.0f;
 
     bool isColliding(Entity *other) const;
 
@@ -74,8 +77,8 @@ private:
     }
 
     void animate(float deltaTime);
-    void AIActivate(Entity *target);
-    void AIWander();
+    void AIActivate(Entity *target, Map* map); 
+    void AIWander(Map* map);
     void AIFollow(Entity *target);
 
 public:
@@ -110,8 +113,8 @@ public:
 
     void moveLeft()  { mMovement.x = -1; mDirection = LEFT;  }
     void moveRight() { mMovement.x =  1; mDirection = RIGHT; }
-    void moveUp()    { mMovement.y = -1; mDirection = LEFT;  }
-    void moveDown()  { mMovement.y =  1; mDirection = RIGHT; }
+    void moveUp()    { mMovement.y = -1; mDirection = UP;    } 
+    void moveDown()  { mMovement.y =  1; mDirection = DOWN;  }
 
     void resetMovement() { mMovement = { 0.0f, 0.0f }; }
 
@@ -170,8 +173,10 @@ public:
         { mAIState = newState;                     }
     void setAIType(AIType newType)
         { mAIType = newType;                       }
+    ToolType getTool() const { return mEquippedTool; }
 
-    void interact(std::vector<Entity*>& worldEntities); 
+    std::string interact(std::vector<Entity*>& worldEntities);
+    std::string useTool(std::vector<Entity*>& worldEntities); 
     void sellItems();
     
     int getMoney() const { return mMoney; }
@@ -180,6 +185,11 @@ public:
     void setDialogue(std::string text) { mDialogueText = text; }
     std::string getDialogue() const { return mDialogueText; }
     
+    void cycleTool() {
+        int t = (int)mEquippedTool + 1;
+        if (t > TOOL_ROD) t = TOOL_NONE;
+        mEquippedTool = (ToolType)t;
+    }
 };
 
 #endif

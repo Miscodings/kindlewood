@@ -1,34 +1,43 @@
 #include <iostream>
 #include "Entity.h"
 
-Entity::Entity() : mPosition {0.0f, 0.0f}, mMovement {0.0f, 0.0f}, 
-                   mVelocity {0.0f, 0.0f}, mAcceleration {0.0f, 0.0f},
-                   mScale {DEFAULT_SIZE, DEFAULT_SIZE},
-                   mColliderDimensions {DEFAULT_SIZE, DEFAULT_SIZE}, 
-                   mTexture {0}, mTextureType {SINGLE}, mAngle {0.0f},
-                   mSpriteSheetDimensions {}, mDirection {RIGHT}, 
-                   mAnimationAtlas {{}}, mAnimationIndices {}, mFrameSpeed {0},
-                   mEntityType {NONE} { }
+Entity::Entity() 
+    : mPosition {0.0f, 0.0f}, mMovement {0.0f, 0.0f}, 
+      mVelocity {0.0f, 0.0f}, mAcceleration {0.0f, 0.0f},
+      mScale {DEFAULT_SIZE, DEFAULT_SIZE},
+      mColliderDimensions {DEFAULT_SIZE, DEFAULT_SIZE}, 
+      mTexture {0}, mTextureType {SINGLE}, mAngle {0.0f},
+      mSpriteSheetDimensions {0.0f, 0.0f}, mDirection {RIGHT}, 
+      mAnimationAtlas {{}}, mAnimationIndices {}, mFrameSpeed {0},
+      mEntityType {NONE}, mAIStateTime{0.0f}, mAIStateDuration{2.0f}
+{ 
+}
+
+Entity::Entity(Vector2 position, Vector2 scale, const char *textureFilepath, EntityType entityType) 
+    : mPosition {position}, mVelocity {0.0f, 0.0f}, 
+      mAcceleration {0.0f, 0.0f}, mScale {scale}, mMovement {0.0f, 0.0f}, 
+      mColliderDimensions {scale}, mTexture {LoadTexture(textureFilepath)}, 
+      mTextureType {SINGLE}, mDirection {RIGHT}, mAnimationAtlas {{}}, 
+      mAnimationIndices {}, mFrameSpeed {0}, mSpeed {DEFAULT_SPEED}, 
+      mAngle {0.0f}, mEntityType {entityType}, 
+      mAIStateTime{0.0f}, mAIStateDuration{2.0f}
+{ 
+}
 
 Entity::Entity(Vector2 position, Vector2 scale, const char *textureFilepath, 
-    EntityType entityType) : mPosition {position}, mVelocity {0.0f, 0.0f}, 
-    mAcceleration {0.0f, 0.0f}, mScale {scale}, mMovement {0.0f, 0.0f}, 
-    mColliderDimensions {scale}, mTexture {LoadTexture(textureFilepath)}, 
-    mTextureType {SINGLE}, mDirection {RIGHT}, mAnimationAtlas {{}}, 
-    mAnimationIndices {}, mFrameSpeed {0}, mSpeed {DEFAULT_SPEED}, 
-    mAngle {0.0f}, mEntityType {entityType} { }
-
-Entity::Entity(Vector2 position, Vector2 scale, const char *textureFilepath, 
-        TextureType textureType, Vector2 spriteSheetDimensions, std::map<Direction, 
-        std::vector<int>> animationAtlas, EntityType entityType) : 
-        mPosition {position}, mVelocity {0.0f, 0.0f}, 
-        mAcceleration {0.0f, 0.0f}, mMovement { 0.0f, 0.0f }, mScale {scale},
-        mColliderDimensions {scale}, mTexture {LoadTexture(textureFilepath)}, 
-        mTextureType {ATLAS}, mSpriteSheetDimensions {spriteSheetDimensions},
-        mAnimationAtlas {animationAtlas}, mDirection {RIGHT},
-        mAnimationIndices {animationAtlas.at(RIGHT)}, 
-        mFrameSpeed {DEFAULT_FRAME_SPEED}, mAngle { 0.0f }, 
-        mSpeed { DEFAULT_SPEED }, mEntityType {entityType} { }
+    TextureType textureType, Vector2 spriteSheetDimensions, std::map<Direction, 
+    std::vector<int>> animationAtlas, EntityType entityType) 
+    : mPosition {position}, mVelocity {0.0f, 0.0f}, 
+      mAcceleration {0.0f, 0.0f}, mMovement { 0.0f, 0.0f }, mScale {scale},
+      mColliderDimensions {scale}, mTexture {LoadTexture(textureFilepath)}, 
+      mTextureType {ATLAS}, mSpriteSheetDimensions {spriteSheetDimensions},
+      mAnimationAtlas {animationAtlas}, mDirection {RIGHT},
+      mAnimationIndices {animationAtlas.at(RIGHT)}, 
+      mFrameSpeed {DEFAULT_FRAME_SPEED}, mAngle { 0.0f }, 
+      mSpeed { DEFAULT_SPEED }, mEntityType {entityType},
+      mAIStateTime{0.0f}, mAIStateDuration{2.0f}
+{ 
+}
 
 Entity::~Entity() { UnloadTexture(mTexture); };
 
@@ -37,6 +46,9 @@ void Entity::checkCollisionY(const std::vector<Entity*>& collidableEntities)
     for (Entity* collidableEntity : collidableEntities)
     {
         if (collidableEntity == this) continue; 
+
+        EntityType type = collidableEntity->getEntityType();
+        if (type == COLLECTIBLE || type == BUG || type == FISH) continue;
 
         if (isColliding(collidableEntity))
         {
@@ -63,6 +75,9 @@ void Entity::checkCollisionX(const std::vector<Entity*>& collidableEntities)
     {
         // Don't collide with self
         if (collidableEntity == this) continue;
+
+        EntityType type = collidableEntity->getEntityType();
+        if (type == COLLECTIBLE || type == BUG || type == FISH) continue;
 
         if (isColliding(collidableEntity))
         {            
@@ -140,7 +155,6 @@ void Entity::checkCollisionX(Map *map)
         mIsCollidingRight = true;
     }
 
-    // COLLISION ON LEFT (moving left)
     if (map->isSolidTileAt(leftCentreProbe, &xOverlap, &yOverlap) 
          && mVelocity.x < 0.0f && yOverlap >= 0.5f)
     {
@@ -179,17 +193,68 @@ void Entity::animate(float deltaTime)
     }
 }
 
-void Entity::AIWander() {
-    static float wanderTimer = 0.0f;
-    wanderTimer += GetFrameTime();
+void Entity::AIWander(Map* map) 
+{
+    mAIStateTime += GetFrameTime();
+    if (mAIStateTime >= mAIStateDuration)
+    {
+        mAIStateTime = 0.0f;
+        mAIStateDuration = (float)GetRandomValue(10, 30) / 10.0f; // 1.0s to 3.0s
 
-    if (wanderTimer > 0.5f) {
-        mDirection = (mDirection == LEFT) ? RIGHT : LEFT;
-        wanderTimer = 0.0f;
+        if (mEntityType == NPC) 
+        {
+            int action = GetRandomValue(0, 100);
+            if (action < 30) {
+                mMovement = { 0.0f, 0.0f };
+                mAIState = IDLE;
+            } else {
+                if (GetRandomValue(0, 1) == 0) moveLeft();
+                else moveRight();
+                mAIState = WALKING;
+            }
+        }
+        else if (mEntityType == BUG || mEntityType == FISH) 
+        {
+            int action = GetRandomValue(0, 100);
+            if (action < 20) {
+                mMovement = { 0.0f, 0.0f };
+            } else {
+                float randX = (float)GetRandomValue(-10, 10) / 10.0f;
+                float randY = (float)GetRandomValue(-10, 10) / 10.0f;
+                mMovement = { randX, randY };
+                Normalise(&mMovement);
+            }
+            
+            if (fabs(mMovement.x) > fabs(mMovement.y)) {
+                mDirection = (mMovement.x < 0) ? LEFT : RIGHT;
+            } else {
+                mDirection = (mMovement.y < 0) ? UP : DOWN;
+            }
+        }
     }
 
-    if (mDirection == LEFT) moveLeft();
-    else moveRight();
+    if (map) {
+        float padding = 50.0f; // Turn around before hitting the exact edge
+        float mapL = map->getLeftBoundary() + padding;
+        float mapR = map->getRightBoundary() - padding;
+        float mapT = map->getTopBoundary() + padding;
+        float mapB = map->getBottomBoundary() - padding;
+
+        if (mPosition.x < mapL) mMovement.x = 0.5f;
+        if (mPosition.x > mapR) mMovement.x = -0.5f;
+        
+        if (mEntityType == BUG || mEntityType == FISH) {
+            if (mPosition.y < mapT) mMovement.y = 0.5f;
+            if (mPosition.y > mapB) mMovement.y = -0.5f;
+        }
+    }
+    
+    if (mEntityType == BUG && Vector2Length(mMovement) > 0.1f) {
+        mAngle = atan2(mMovement.y, mMovement.x) * (180.0f / PI);
+         mAngle += 90.0f; 
+    } else {
+        mAngle = 0.0f;
+    }
 }
 
 void Entity::AIFollow(Entity *target)
@@ -230,12 +295,12 @@ void Entity::AIFollow(Entity *target)
     }
 }
 
-void Entity::AIActivate(Entity *target)
+void Entity::AIActivate(Entity *target, Map* map)
 {
     switch (mAIType)
     {
     case WANDERER:
-        AIWander();
+        AIWander(map);
         break;
 
     case FOLLOWER:
@@ -270,7 +335,10 @@ void Entity::update(float deltaTime, Entity *player, Map *map, const std::vector
 {
     if (mEntityStatus == INACTIVE) return;
 
-    if (mEntityType == NPC) AIActivate(player);
+    // Pass 'map' to the AI
+    if (mEntityType == NPC || mEntityType == BUG || mEntityType == FISH) {
+        AIActivate(player, map);
+    }
 
     resetColliderFlags();
 
@@ -279,22 +347,32 @@ void Entity::update(float deltaTime, Entity *player, Map *map, const std::vector
     mVelocity.y = mMovement.y * mSpeed;
     mVelocity.y += mAcceleration.y * deltaTime;
 
-    // Update Y and check Vector collision
     mPosition.y += mVelocity.y * deltaTime;
     checkCollisionY(collidableEntities);
     checkCollisionY(map);
 
-    // Update X and check Vector collision
     mPosition.x += mVelocity.x * deltaTime;
     checkCollisionX(collidableEntities);
     checkCollisionX(map);
 
-    // direction decision
-    if (mEntityType == PLAYER)
+    if (mMovement.x < 0)      mDirection = LEFT;
+    else if (mMovement.x > 0) mDirection = RIGHT;
+    else if (mMovement.y < 0) mDirection = UP;
+    else if (mMovement.y > 0) mDirection = DOWN;
+
+    if (Vector2Length(mVelocity) > 1.0f) 
     {
-        if (fabs(mVelocity.x) > 0.1f) {
-            mDirection = (mVelocity.x > 0) ? RIGHT : LEFT;
-        }
+        if (mDirection == LEFT)       mDirection = LEFT_WALK;
+        else if (mDirection == RIGHT) mDirection = RIGHT_WALK;
+        else if (mDirection == UP)    mDirection = UP_WALK;
+        else if (mDirection == DOWN)  mDirection = DOWN_WALK;
+    }
+    else 
+    {
+        if (mDirection == LEFT_WALK)       mDirection = LEFT;
+        else if (mDirection == RIGHT_WALK) mDirection = RIGHT;
+        else if (mDirection == UP_WALK)    mDirection = UP;
+        else if (mDirection == DOWN_WALK)  mDirection = DOWN;
     }
 
     if (mTextureType == ATLAS) {
@@ -302,9 +380,6 @@ void Entity::update(float deltaTime, Entity *player, Map *map, const std::vector
         if (it != mAnimationAtlas.end()) {
             mAnimationIndices = it->second;
             animate(deltaTime);
-        } else {
-            mAnimationIndices = mAnimationAtlas[RIGHT];
-            mCurrentFrameIndex = mAnimationIndices[0];
         }
     }
 }
@@ -346,24 +421,19 @@ void Entity::render()
     Vector2 originOffset;
 
     if (mEntityType == PROP) {
-        // For Trees/Rocks: Position is at the bottom-center (Feet)
-        // We shift the drawing UP so the sprite stands on top of the collision box.
         originOffset = {
             static_cast<float>(mScale.x) / 2.0f, 
-            static_cast<float>(mScale.y) - (mColliderDimensions.y / 2.0f) // Shift Up
+            static_cast<float>(mScale.y) - (mColliderDimensions.y / 2.0f)
         };
-    } else if (mEntityType == COLLECTIBLE) {
-        // For Trees/Rocks: Position is at the bottom-center (Feet)
-        // We shift the drawing UP so the sprite stands on top of the collision box.
-        originOffset = {
-            static_cast<float>(mScale.x),
-            static_cast<float>(mScale.y)
-        };
-    } else {
-        // For Player/NPCs: Center-Center
+    } else if (mEntityType == COLLECTIBLE || mEntityType == BUG || mEntityType == FISH) {
         originOffset = {
             static_cast<float>(mScale.x) / 2.0f,
-            static_cast<float>(mScale.y) / 2.0f + (mColliderDimensions.y)
+            static_cast<float>(mScale.y) / 2.0f
+        };
+    } else {
+        originOffset = {
+            static_cast<float>(mScale.x) / 2.0f,
+            static_cast<float>(mScale.y) / 2.0f + (mColliderDimensions.y * 1.5f) 
         };
     }
 
@@ -372,8 +442,6 @@ void Entity::render()
         textureArea, destinationArea, originOffset,
         mAngle, WHITE
     );
-
-    // displayCollider();
 }
 
 void Entity::displayCollider() 
@@ -410,14 +478,31 @@ void Entity::sellItems()
     std::cout << "Sold items for $" << totalValue << ". Total: $" << mMoney << std::endl;
 }
 
-void Entity::interact(std::vector<Entity*>& worldEntities)
+std::string Entity::interact(std::vector<Entity*>& worldEntities)
 {
-    Vector2 probe = mPosition;
-    float reach = 10.0f; // How far away can we grab?
+    std::string output = "";
 
-    if (mDirection == LEFT)  probe.x -= reach;
-    if (mDirection == RIGHT) probe.x += reach;
+    float sensorSize = 10.0f; 
+    float reach = 10.0f;
+
+    Vector2 dirCenter = mPosition;
+    if (mDirection == LEFT || mDirection == LEFT_WALK)        dirCenter.x -= reach;
+    else if (mDirection == RIGHT || mDirection == RIGHT_WALK) dirCenter.x += reach;
+    else if (mDirection == UP || mDirection == UP_WALK)       dirCenter.y -= reach;
+    else if (mDirection == DOWN || mDirection == DOWN_WALK)   dirCenter.y += reach;
+
+    float dirLeft   = dirCenter.x - (sensorSize / 2.0f);
+    float dirRight  = dirCenter.x + (sensorSize / 2.0f);
+    float dirTop    = dirCenter.y - (sensorSize / 2.0f);
+    float dirBottom = dirCenter.y + (sensorSize / 2.0f);
+
+    float proxSize = 10.0f; 
     
+    float proxLeft   = mPosition.x - (proxSize / 2.0f);
+    float proxRight  = mPosition.x + (proxSize / 2.0f);
+    float proxTop    = mPosition.y - (proxSize / 2.0f);
+    float proxBottom = mPosition.y + (proxSize / 2.0f);
+
     for (auto it = worldEntities.begin(); it != worldEntities.end(); )
     {
         Entity* e = *it;
@@ -427,36 +512,128 @@ void Entity::interact(std::vector<Entity*>& worldEntities)
             continue;
         }
 
-        Rectangle targetRect = {
-            e->getPosition().x - e->getColliderDimensions().x/2,
-            e->getPosition().y - e->getColliderDimensions().y/2,
-            e->getColliderDimensions().x,
-            e->getColliderDimensions().y
-        };
+        float entityHalfWidth  = e->getColliderDimensions().x / 2.0f;
+        float entityHalfHeight = e->getColliderDimensions().y / 2.0f;
+        float eLeft   = e->getPosition().x - entityHalfWidth;
+        float eRight  = e->getPosition().x + entityHalfWidth;
+        float eTop    = e->getPosition().y - entityHalfHeight;
+        float eBottom = e->getPosition().y + entityHalfHeight;
 
-        if (CheckCollisionPointRec(probe, targetRect))
+        if (e->getEntityType() == COLLECTIBLE)
         {
-            if (e->getEntityType() == PROP && e->getScale().y > 32) // Rough check for tree vs rock
-            {
-                Entity* apple = new Entity(
-                    {e->getPosition().x, e->getPosition().y + 15.0f}, 
-                    {10.0f, 10.0f},
-                    "assets/game/apple.png", 
-                    COLLECTIBLE
-                );
-                apple->setColliderDimensions({8.0f, 8.0f});
-                worldEntities.push_back(apple);
-                break; 
-            }
-
-            else if (e->getEntityType() == COLLECTIBLE)
-            {
+            bool inProximity = (proxRight > eLeft) && (proxLeft < eRight) && 
+                               (proxBottom > eTop) && (proxTop < eBottom);
+            
+            if (inProximity) {
                 mInventory.push_back({ ITEM_APPLE, 10 });
                 delete e;
                 it = worldEntities.erase(it);
-                break;
+                break; 
+            } else {
+                ++it;
             }
+        } else {
+            bool inDirection = (dirRight > eLeft) && (dirLeft < eRight) && 
+                               (dirBottom > eTop) && (dirTop < eBottom);
+
+            if (inDirection)
+            {
+                if (e->getEntityType() == PROP && e->getScale().y == 48.0f)
+                {
+                    Entity* apple = new Entity(
+                        {e->getPosition().x, e->getPosition().y + 15.0f}, 
+                        {10.0f, 10.0f},
+                        "assets/game/apple.png", 
+                        COLLECTIBLE
+                    );
+                    apple->setColliderDimensions({8.0f, 8.0f});
+                    worldEntities.push_back(apple);
+                    break; 
+                }
+                else if (e->getEntityType() == NPC)
+                {
+                    if (mPosition.x < e->getPosition().x) e->setDirection(LEFT);
+                    else e->setDirection(RIGHT);
+
+                    output = e->getDialogue();
+                    break;
+                }
+            }
+            ++it;
         }
-        ++it;
     }
+    
+    return output;
+}
+
+std::string Entity::useTool(std::vector<Entity*>& worldEntities)
+{
+    if (mEquippedTool == TOOL_NONE) return "";
+
+    Vector2 reachPoint = mPosition;
+    float reachDistance = 10.0f; 
+
+    if (mDirection == LEFT || mDirection == LEFT_WALK)        reachPoint.x -= reachDistance;
+    else if (mDirection == RIGHT || mDirection == RIGHT_WALK) reachPoint.x += reachDistance;
+    else if (mDirection == UP || mDirection == UP_WALK)       reachPoint.y -= reachDistance;
+    else if (mDirection == DOWN || mDirection == DOWN_WALK)   reachPoint.y += reachDistance;
+
+    Rectangle toolHitbox = {
+        reachPoint.x - 10, reachPoint.y - 10, 20, 20
+    };
+
+    if (mEquippedTool == TOOL_NET)
+    {
+        for (auto it = worldEntities.begin(); it != worldEntities.end(); )
+        {
+            Entity* e = *it;
+            if (e->getEntityType() == BUG && e->isActive())
+            {
+                Rectangle targetRect = {
+                    e->getPosition().x - e->getColliderDimensions().x/2,
+                    e->getPosition().y - e->getColliderDimensions().y/2,
+                    e->getColliderDimensions().x,
+                    e->getColliderDimensions().y
+                };
+
+                if (CheckCollisionRecs(toolHitbox, targetRect))
+                {
+                    mInventory.push_back({ ITEM_BUTTERFLY, 150 }); 
+                    delete e;
+                    it = worldEntities.erase(it);
+                    return "Caught a Bug!";
+                }
+            }
+            ++it;
+        }
+    }
+
+    else if (mEquippedTool == TOOL_ROD)
+    {
+        for (auto it = worldEntities.begin(); it != worldEntities.end(); )
+        {
+            Entity* e = *it;
+            // FISH is now defined in Entity.h
+            if (e->getEntityType() == FISH && e->isActive())
+            {
+                Rectangle targetRect = {
+                    e->getPosition().x - e->getColliderDimensions().x/2,
+                    e->getPosition().y - e->getColliderDimensions().y/2,
+                    e->getColliderDimensions().x,
+                    e->getColliderDimensions().y
+                };
+
+                if (CheckCollisionRecs(toolHitbox, targetRect))
+                {
+                    mInventory.push_back({ ITEM_BASS, 300 }); 
+                    delete e;
+                    it = worldEntities.erase(it);
+                    return "Caught a Sea Bass! No wait--";
+                }
+            }
+            ++it;
+        }
+    }
+    
+    return "";
 }

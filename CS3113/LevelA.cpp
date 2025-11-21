@@ -80,16 +80,22 @@ void LevelA::initialise()
    mGameState.map->addLayer(mDataFlowers, false);
 
    std::map<Direction, std::vector<int>> playerAnimationAtlas = {
-      {RIGHT,  { 0,  1, 2, 3 }},
-      {LEFT, { 8, 9, 10, 11 }},
+      {DOWN,  { 1 }},
+      {DOWN_WALK, { 0, 1, 2 }},
+      {UP,  { 10 }},
+      {UP_WALK, { 9, 10, 11 }},
+      {LEFT,  { 4 }},
+      {LEFT_WALK, { 3, 4, 5 }},
+      {RIGHT,  { 7 }},
+      {RIGHT_WALK, { 6, 7, 8 }},
    };
 
    mGameState.player = new Entity(
       {mOrigin.x + 30.0f, mOrigin.y + 30.0f},   // Spawn position
-      {32.0f, 32.0f},                           // Scale (32px is 2 tiles wide)
-      "assets/game/sprites.png",                // Texture
+      {24.0f, 24.0f},                           // Scale (32px is 2 tiles wide)
+      "assets/game/character.png",                // Texture
       ATLAS,                                    
-      { 6, 8 },                                 
+      { 4, 3 },                                 
       playerAnimationAtlas,                    
       PLAYER                                    
    );
@@ -101,6 +107,7 @@ void LevelA::initialise()
 
    buildForest();
    buildVillage();
+   spawnNPCs();
 
    mGameState.camera = { 0 };                                     
    mGameState.camera.target = mGameState.player->getPosition();   
@@ -113,14 +120,23 @@ void LevelA::update(float deltaTime)
 {
    UpdateMusicStream(mGameState.bgm);
    
-   if (mIsChatting) 
-   {
-        // If player presses E or Space, close the chat
-      if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
-         mIsChatting = false;
+   int bugCount = 0;
+   for (Entity* e : mGameState.entities) {
+      if (e->getEntityType() == BUG && e->isActive()) {
+         bugCount++;
       }
-      return; // SKIP THE REST (Freezes physics/movement)
    }
+
+   if (bugCount < 4) {
+      mBugRespawnTimer += deltaTime;
+      // Respawn after 3 seconds
+      if (mBugRespawnTimer > 3.0f) {
+         spawnBug();
+         mBugRespawnTimer = 0.0f;
+      }
+   }
+
+   if (mIsChatting) return;
 
    // 1. PHYSICS UPDATE
    // Pass the map so tile collision happens
@@ -198,10 +214,26 @@ void LevelA::render()
 
    int money = mGameState.player->getMoney();
    int bagSize = mGameState.player->getInventorySize();
+   
+   std::string toolName = "Hands";
+   ToolType t = mGameState.player->getTool();
+   if (t == TOOL_NET) toolName = "Net";
+   else if (t == TOOL_ROD) toolName = "Rod";
+   else if (t == TOOL_AXE) toolName = "Axe";
 
    DrawText(TextFormat("Money: $%d", money), 20, 20, 30, GOLD);
    DrawText(TextFormat("Bag: %d Items", bagSize), 20, 60, 20, WHITE);
+   DrawText(TextFormat("Tool: %s (TAB)", toolName.c_str()), 20, 90, 20, YELLOW);
+   DrawText("SPACE: Act | P: Sell", 20, 120, 10, LIGHTGRAY);
 
+   if (mIsChatting)
+   {
+       DrawRectangle(50, 450, 900, 130, Fade(BLACK, 0.8f));
+       DrawRectangleLines(50, 450, 900, 130, WHITE);
+       DrawText("Bob", 70, 460, 20, YELLOW);
+       DrawText(mCurrentChatText.c_str(), 70, 490, 24, WHITE);
+       DrawText(">>", 900, 550, 20, (int)GetTime() % 2 == 0 ? WHITE : GRAY);
+   }
 }
 
 void LevelA::shutdown()
@@ -214,69 +246,103 @@ void LevelA::shutdown()
 
 void LevelA::buildForest()
 {
-    float mapX = mGameState.map->getLeftBoundary();
-    float mapY = mGameState.map->getTopBoundary();
+   float mapX = mGameState.map->getLeftBoundary();
+   float mapY = mGameState.map->getTopBoundary();
 
-    std::vector<Vector2> treePositions = {
-        {50, 35}, {90, 25}, {130, 30}, {170, 25}, {210, 31}, {250, 28}, {290, 30}, {330, 37}, {370, 23}, {410, 40},
-    };
+   std::vector<Vector2> treePositions = {
+      {50, 35}, {90, 25}, {130, 30}, {170, 25}, {210, 31}, {250, 28}, {290, 30}, {330, 37}, {370, 23}, {410, 40},
+   };
 
-    std::vector<Vector2> rockPositions = {
-        {300, 300}, {450, 200}, {50, 500}
-    };
+   std::vector<Vector2> rockPositions = {
+      {300, 300}, {450, 200}, {50, 500}
+   };
 
-    for (Vector2 pos : treePositions) {
-         int variant = GetRandomValue(1, 4); 
-         const char* path = TextFormat("assets/game/tree_%d.png", variant);
+   for (Vector2 pos : treePositions) {
+      int variant = GetRandomValue(1, 4); 
+      const char* path = TextFormat("assets/game/tree_%d.png", variant);
 
-         Entity* tree = new Entity(
-            {mapX + pos.x, mapY + pos.y},   // Spawn position
-            {32.0f, 48.0f},                           // Scale
-            path,          // Texture
-            PROP
-         );
-         tree->setColliderDimensions({10.0f, 20.0f}); 
-         mGameState.entities.push_back(tree);
-    }
+      Entity* tree = new Entity(
+         {mapX + pos.x, mapY + pos.y},   // Spawn position
+         {32.0f, 48.0f},                           // Scale
+         path,          // Texture
+         PROP
+      );
+      tree->setColliderDimensions({10.0f, 20.0f}); 
+      mGameState.entities.push_back(tree);
+   }
 
-    for (Vector2 pos : rockPositions) {
-        int variant = GetRandomValue(1, 5);
-        const char* path = TextFormat("assets/game/rock_%d.png", variant);
+   for (Vector2 pos : rockPositions) {
+      int variant = GetRandomValue(1, 5);
+      const char* path = TextFormat("assets/game/rock_%d.png", variant);
 
-        Entity* rock = new Entity(
-            {mapX + pos.x, mapY + pos.y},
-            {16.0f, 16.0f},
-            path,
-            PROP
-        );
-        rock->setColliderDimensions({12.0f, 12.0f});
-        mGameState.entities.push_back(rock);
-    }
+      Entity* rock = new Entity(
+         {mapX + pos.x, mapY + pos.y},
+         {16.0f, 16.0f},
+         path,
+         PROP
+      );
+      rock->setColliderDimensions({12.0f, 12.0f});
+      mGameState.entities.push_back(rock);
+   }
+
+   std::map<Direction, std::vector<int>> bugAnims = {
+       {LEFT,       {18, 19, 20}},
+       {RIGHT,      {6, 7, 8}},
+       {UP,         {0, 1, 2}},
+       {DOWN,       {12, 13, 14}},
+       {LEFT_WALK,  {18, 19, 20}},
+       {RIGHT_WALK, {6, 7, 8}},
+       {UP_WALK,    {0, 1, 2}},
+       {DOWN_WALK,  {12, 13, 14}}
+   };
+
+   for(int i = 0; i < 4; i++) {
+      spawnBug();
+   }
+
+   Entity* fish = new Entity(
+      {600, 360}, 
+      {24.0f, 24.0f}, 
+      "assets/game/fish_shadow.png",
+      FISH
+   );
+
+   fish->setColliderDimensions({20,20});
+   fish->setAIType(WANDERER); 
+   fish->setAIState(WALKING);
+   mGameState.entities.push_back(fish);
 }
 
 void LevelA::buildVillage()
 {
-    float mapX = mGameState.map->getLeftBoundary();
-    float mapY = mGameState.map->getTopBoundary();
+   float mapX = mGameState.map->getLeftBoundary();
+   float mapY = mGameState.map->getTopBoundary();
 
-    std::vector<Vector2> housePositions = {
-        {200, 200}, // Player's House?
-        {400, 350}, // Neighbor 1
-        {550, 150}  // Shop?
-    };
+   std::vector<Vector2> housePositions = {
+      {90, 95},
+      {400, 350},
+      {550, 150}
+   };
 
-    for (Vector2 pos : housePositions) {
-        Entity* house = new Entity(
-            {mapX + pos.x, mapY + pos.y},
-            {80.0f, 80.0f},
-            "assets/game/house_1.png",
-            PROP
-        );
+   for (Vector2 pos : housePositions) {
+      Entity* house = new Entity(
+         {mapX + pos.x, mapY + pos.y},
+         {80.0f, 80.0f},
+         "assets/game/house_1.png",
+         PROP
+      );
+      house->setColliderDimensions({60.0f, 40.0f}); 
+      mGameState.entities.push_back(house);
+   }
 
-        house->setColliderDimensions({60.0f, 40.0f}); 
-        
-        mGameState.entities.push_back(house);
-    }
+   Entity* store = new Entity(
+      {mapX + 140, mapY + 405},
+      {80.0f, 80.0f},
+      "assets/game/store.png",
+      PROP
+   );
+   store->setColliderDimensions({60.0f, 40.0f}); 
+   mGameState.entities.push_back(store);
 }
 
 void LevelA::spawnNPCs()
@@ -304,4 +370,34 @@ void LevelA::spawnNPCs()
     bob->setDialogue("Welcome to Kindlewood! Watch out for bees.");
     
     mGameState.entities.push_back(bob);
+}
+
+void LevelA::spawnBug()
+{
+    float mapWidth = mGameState.map->getRightBoundary();
+    float mapHeight = mGameState.map->getBottomBoundary();
+
+    float randX = (float)GetRandomValue(100, (int)mapWidth - 100);
+    float randY = (float)GetRandomValue(100, (int)mapHeight - 100);
+
+    std::map<Direction, std::vector<int>> bugAnims = {
+       {LEFT,       {0, 1, 2}}, {RIGHT,      {0, 1, 2}},
+       {UP,         {0, 1, 2}}, {DOWN,       {0, 1, 2}},
+       {LEFT_WALK,  {0, 1, 2}}, {RIGHT_WALK, {0, 1, 2}},
+       {UP_WALK,    {0, 1, 2}}, {DOWN_WALK,  {0, 1, 2}}
+    };
+
+    Entity* bug = new Entity(
+       {randX, randY}, 
+       {16.0f, 16.0f}, 
+       "assets/game/butterfly.png", 
+       ATLAS, {8, 3}, bugAnims, BUG
+    );
+
+    bug->setFrameSpeed(10);
+    bug->setColliderDimensions({10,10});
+    bug->setAIType(WANDERER);
+    bug->setSpeed(40);
+    
+    mGameState.entities.push_back(bug);
 }

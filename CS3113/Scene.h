@@ -35,6 +35,10 @@ public:
     virtual void render() = 0;
     virtual void shutdown() = 0;
     
+    virtual void setChat(const std::string& text) {} 
+    virtual bool isChatting() { return false; }
+    virtual void stopChat() {}
+
     GameState& getState()                  { return mGameState; }
     Vector2     getOrigin()          const { return mOrigin;    }
     const char* getBGColourHexCode() const { return mBGColourHexCode; }
