@@ -62,7 +62,7 @@ void initialise()
     gLevels.push_back(gLevel0);
     gLevels.push_back(gLevelA);
 
-    switchToScene(gLevels[2]);
+    switchToScene(gLevels[0]);
 
     gEffects = new Effects(ORIGIN, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
     gEffects->start(FADEIN); // Fade into the intro
@@ -124,8 +124,6 @@ void update()
     while (gTimeAccumulator >= FIXED_TIMESTEP)
     {
         if (gCurrentScene) {
-            // Only update the game logic if we ARE NOT transitioning out.
-            // If we are fading to black, we usually want the player to stop moving.
             if (!gIsTransitioning) {
                 gCurrentScene->update(FIXED_TIMESTEP);
             }
@@ -135,32 +133,21 @@ void update()
             }
         }
         
-        // Update effects (handles the alpha calculation)
         if (gEffects) gEffects->update(FIXED_TIMESTEP, nullptr);
 
-        // --- TRANSITION LOGIC ---
         if (gCurrentScene && gCurrentScene->getState().nextSceneID != -1)
         {
-            // 1. Start the Fade Out
             if (!gIsTransitioning) {
                 gEffects->start(FADEOUT);
                 gIsTransitioning = true;
             }
-            // 2. Wait for Fade Out to complete
-            // We check if the effect is finished (NONE) AND screen is black (Alpha >= 1.0)
             else if (gEffects->getCurrentEffect() == NONE && gEffects->getAlpha() >= 1.0f) {
-                
-                int id = gCurrentScene->getState().nextSceneID;
-                
-                // SWITCH SCENE NOW
+                int id = gCurrentScene->getState().nextSceneID;                
                 if (id >= 0 && id < gLevels.size()) {
                     switchToScene(gLevels[id]);
                 }
                 
-                // 3. Start Fade In for the new scene
                 gEffects->start(FADEIN);
-                
-                // Turn off the transition flag so the new scene can update
                 gIsTransitioning = false; 
             }
         }

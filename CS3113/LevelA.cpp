@@ -1,7 +1,7 @@
 #include "LevelA.h"
 #include <algorithm>
 
-LevelA::LevelA()                                      : Scene { {0.0f}, nullptr   } {}
+LevelA::LevelA()                              : Scene { {0.0f}, nullptr   } {}
 LevelA::LevelA(Vector2 origin, const char *bgHexCode) : Scene { origin, bgHexCode } {}
 
 LevelA::~LevelA() {
@@ -93,7 +93,7 @@ void LevelA::initialise()
    mGameState.player = new Entity(
       {mOrigin.x + 30.0f, mOrigin.y + 30.0f},   // Spawn position
       {24.0f, 24.0f},                           // Scale (32px is 2 tiles wide)
-      "assets/game/character.png",                // Texture
+      "assets/game/character.png",              // Texture
       ATLAS,                                    
       { 4, 3 },                                 
       playerAnimationAtlas,                    
@@ -106,6 +106,7 @@ void LevelA::initialise()
    });
 
    mGameState.player->setPosition({268, 105});
+   mGameState.player->setSpeed(50.0f);
 
    buildForest();
    buildVillage();
@@ -131,48 +132,38 @@ void LevelA::update(float deltaTime)
 
    if (bugCount < 4) {
       mBugRespawnTimer += deltaTime;
-      // Respawn after 3 seconds
       if (mBugRespawnTimer > 3.0f) {
          spawnBug();
          mBugRespawnTimer = 0.0f;
       }
    }
 
+   // Pause updates if chatting
+   // Input for closing chat is handled in main.cpp
    if (mIsChatting) return;
 
-   // 1. PHYSICS UPDATE
-   // Pass the map so tile collision happens
    mGameState.player->update(deltaTime, mGameState.player, mGameState.map, mGameState.entities);
 
    for (auto& entity : mGameState.entities) {
       entity->update(deltaTime, mGameState.player, mGameState.map, mGameState.entities);
    }
 
-   // 2. HARD BOUNDARY CLAMP (Stops you walking off)
-   // -----------------------------------------------------
    Vector2 pos = mGameState.player->getPosition();
    Vector2 col = mGameState.player->getColliderDimensions();
 
-   // Get Map Limits
    float mapLeft   = mGameState.map->getLeftBoundary();
    float mapRight  = mGameState.map->getRightBoundary();
    float mapTop    = mGameState.map->getTopBoundary();
    float mapBottom = mGameState.map->getBottomBoundary();
 
-   // Check Left/Right (Use half-width of collider to stop at edge)
    if (pos.x - (col.x / 2.0f) < mapLeft)   pos.x = mapLeft + (col.x / 2.0f);
    if (pos.x + (col.x / 2.0f) > mapRight)  pos.x = mapRight - (col.x / 2.0f);
 
-   // Check Top/Bottom
    if (pos.y - (col.y / 2.0f) < mapTop)    pos.y = mapTop + (col.y / 2.0f);
    if (pos.y + (col.y / 2.0f) > mapBottom) pos.y = mapBottom - (col.y / 2.0f);
 
-   // Apply fixed position
    mGameState.player->setPosition(pos);
-   // -----------------------------------------------------
 
-
-   // 3. CAMERA LOGIC
    Vector2 currentPlayerPosition = mGameState.player->getPosition();
    float screenWidth = GetScreenWidth() / mGameState.camera.zoom;
    float screenHeight = GetScreenHeight() / mGameState.camera.zoom;
@@ -209,7 +200,7 @@ void LevelA::render()
 
    for (Entity* e : renderQueue) {
          e->render();
-         e->displayCollider();
+         // e->displayCollider();
    }
 
    EndMode2D();
@@ -280,9 +271,9 @@ void LevelA::buildForest()
       const char* path = TextFormat("assets/game/tree_%d.png", variant);
 
       Entity* tree = new Entity(
-         {mapX + pos.x, mapY + pos.y},   // Spawn position
-         {32.0f, 48.0f},                           // Scale
-         path,          // Texture
+         {mapX + pos.x, mapY + pos.y},    // Spawn position
+         {32.0f, 48.0f},                  // Scale
+         path,                            // Texture
          PROP
       );
       tree->setColliderDimensions({10.0f, 20.0f}); 
@@ -375,13 +366,14 @@ void LevelA::spawnNPCs()
 
    Entity* bob = new Entity(
       {mapX + 300, mapY + 300},
-      {32.0f, 32.0f},
+      {50.0f, 32.0f},
       "assets/game/boar_walk.png",
       ATLAS, {2, 6}, npcAnim,
       NPC
    );
    
-   bob->setColliderDimensions({10.0f, 10.0f});
+   bob->setSpeed(20.0f);
+   bob->setColliderDimensions({30.0f, 16.0f}); 
    bob->setAIType(WANDERER);
    bob->setAIState(WALKING);
    bob->setDialogue("Bob|Welcome to Kindlewood! Watch out for bees.");

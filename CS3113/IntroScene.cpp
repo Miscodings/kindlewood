@@ -10,16 +10,26 @@ void IntroScene::initialise()
     mGameState.nextSceneID = -1;
     
     mStoryLines = {
-        "Dear Friend...",
-        "It has been too long since I've seen you.",
-        "I heard you were looking for a change of pace.",
-        "A place where the breeze smells like apples...",
-        "And the rivers sparkle in the morning sun.",
-        "Welcome to Kindlewood Sanctuary.",
-        "It's a little overgrown right now, I admit.",
-        "But with a little love, it could be home.",
-        "The bus is arriving now...",
-        "Are you ready to say hello?"
+        // "Dear Friend...",
+        // "It has been too long since I've seen you.",
+        // "I heard you were looking for a change of pace.",
+        // "A place where the breeze smells like apples...",
+        // "And the rivers sparkle in the morning sun.",
+        // "Welcome to Kindlewood Sanctuary.",
+        // "It's a little overgrown right now, I admit.",
+        // "But with a little love, it could be home.",
+        // "The bus is arriving now...",
+        // "Are you ready to say hello?"
+        "Hi...",
+        "This game is so unfinished, it's not even funny.",
+        "It's supposed to be an Animal Crossing clone.",
+        "All you can do now is navigate a botched map,",
+        "catch bugs by equipping your net (Press TAB),",
+        "interact with one singular mis-shaped NPC,",
+        "shake trees by pressing SPACE, and that's it.",
+        "In the future, there will be fishing,",
+        "a time system, more interactions/NPCs,",
+        "and hopefully some more buildings and stuff."
     };
 
     mCurrentLineIndex = 0;

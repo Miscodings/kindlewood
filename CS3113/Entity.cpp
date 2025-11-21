@@ -430,10 +430,15 @@ void Entity::render()
             static_cast<float>(mScale.x) / 2.0f,
             static_cast<float>(mScale.y) / 2.0f
         };
-    } else {
+    } else if (mEntityType == PLAYER) {
         originOffset = {
             static_cast<float>(mScale.x) / 2.0f,
             static_cast<float>(mScale.y) / 2.0f + (mColliderDimensions.y * 1.5f) 
+        };
+    } else {
+        originOffset = {
+            static_cast<float>(mScale.x) / 2.0f,
+            static_cast<float>(mScale.y) / 2.0f
         };
     }
 
