@@ -6,7 +6,9 @@ Entity::Entity()
       mVelocity {0.0f, 0.0f}, mAcceleration {0.0f, 0.0f},
       mScale {DEFAULT_SIZE, DEFAULT_SIZE},
       mColliderDimensions {DEFAULT_SIZE, DEFAULT_SIZE}, 
-      mTexture {0}, mTextureType {SINGLE}, mAngle {0.0f},
+      mTexture {0}, 
+      mTextureNet {0}, mTextureAxe {0}, mTextureRod {0},
+      mTextureType {SINGLE}, mAngle {0.0f},
       mSpriteSheetDimensions {0.0f, 0.0f}, mDirection {RIGHT}, 
       mAnimationAtlas {{}}, mAnimationIndices {}, mFrameSpeed {0},
       mEntityType {MISC}, mAIStateTime{0.0f}, mAIStateDuration{2.0f}
@@ -17,6 +19,7 @@ Entity::Entity(Vector2 position, Vector2 scale, const char *textureFilepath, Ent
     : mPosition {position}, mVelocity {0.0f, 0.0f}, 
       mAcceleration {0.0f, 0.0f}, mScale {scale}, mMovement {0.0f, 0.0f}, 
       mColliderDimensions {scale}, mTexture {LoadTexture(textureFilepath)}, 
+      mTextureNet {0}, mTextureAxe {0}, mTextureRod {0},
       mTextureType {SINGLE}, mDirection {RIGHT}, mAnimationAtlas {{}}, 
       mAnimationIndices {}, mFrameSpeed {0}, mSpeed {DEFAULT_SPEED}, 
       mAngle {0.0f}, mEntityType {entityType}, 
@@ -30,6 +33,7 @@ Entity::Entity(Vector2 position, Vector2 scale, const char *textureFilepath,
     : mPosition {position}, mVelocity {0.0f, 0.0f}, 
       mAcceleration {0.0f, 0.0f}, mMovement { 0.0f, 0.0f }, mScale {scale},
       mColliderDimensions {scale}, mTexture {LoadTexture(textureFilepath)}, 
+      mTextureNet {0}, mTextureAxe {0}, mTextureRod {0},
       mTextureType {ATLAS}, mSpriteSheetDimensions {spriteSheetDimensions},
       mAnimationAtlas {animationAtlas}, mDirection {RIGHT},
       mAnimationIndices {animationAtlas.at(RIGHT)}, 
@@ -39,7 +43,12 @@ Entity::Entity(Vector2 position, Vector2 scale, const char *textureFilepath,
 { 
 }
 
-Entity::~Entity() { UnloadTexture(mTexture); };
+Entity::~Entity() { 
+    UnloadTexture(mTexture); 
+    if (mTextureNet.id != 0) UnloadTexture(mTextureNet);
+    if (mTextureAxe.id != 0) UnloadTexture(mTextureAxe);
+    if (mTextureRod.id != 0) UnloadTexture(mTextureRod);
+};
 
 void Entity::checkCollisionY(const std::vector<Entity*>& collidableEntities)
 {
@@ -196,25 +205,24 @@ void Entity::animate(float deltaTime)
 void Entity::AIWander(Map* map) 
 {
     mAIStateTime += GetFrameTime();
+
     if (mAIStateTime >= mAIStateDuration)
     {
         mAIStateTime = 0.0f;
-        mAIStateDuration = (float)GetRandomValue(10, 30) / 10.0f; // 1.0s to 3.0s
-
         if (mEntityType == NPC) 
         {
-            int action = GetRandomValue(0, 100);
-            if (action < 30) {
-                mMovement = { 0.0f, 0.0f };
-                mAIState = IDLE;
+            mAIStateDuration = 1.0f;
+            if (mMovement.x < 0.0f) {
+                moveRight();
             } else {
-                if (GetRandomValue(0, 1) == 0) moveLeft();
-                else moveRight();
-                mAIState = WALKING;
+                moveLeft();
             }
+            mAIState = WALKING;
         }
+
         else if (mEntityType == BUG || mEntityType == FISH) 
         {
+            mAIStateDuration = (float)GetRandomValue(100, 300) / 100.0f;
             int action = GetRandomValue(0, 100);
             if (action < 20) {
                 mMovement = { 0.0f, 0.0f };
@@ -234,7 +242,7 @@ void Entity::AIWander(Map* map)
     }
 
     if (map) {
-        float padding = 50.0f; // Turn around before hitting the exact edge
+        float padding = 50.0f;
         float mapL = map->getLeftBoundary() + padding;
         float mapR = map->getRightBoundary() - padding;
         float mapT = map->getTopBoundary() + padding;
@@ -248,14 +256,15 @@ void Entity::AIWander(Map* map)
             if (mPosition.y > mapB) mMovement.y = -0.5f;
         }
     }
-    
+
     if (mEntityType == BUG && Vector2Length(mMovement) > 0.1f) {
         mAngle = atan2(mMovement.y, mMovement.x) * (180.0f / PI);
-         mAngle += 90.0f; 
+        mAngle += 90.0f;
     } else {
         mAngle = 0.0f;
     }
 }
+
 
 void Entity::AIFollow(Entity *target)
 {
@@ -384,74 +393,96 @@ void Entity::update(float deltaTime, Entity *player, Map *map, const std::vector
     }
 }
 
+void Entity::drawTool()
+{
+    if (mEquippedTool == TOOL_NONE) return;
+
+    // --- Select Texture ---
+    Texture2D* currentToolTex = nullptr;
+    if (mEquippedTool == TOOL_NET) currentToolTex = &mTextureNet;
+    else if (mEquippedTool == TOOL_AXE) currentToolTex = &mTextureAxe;
+    else if (mEquippedTool == TOOL_ROD) currentToolTex = &mTextureRod;
+
+    if (!currentToolTex || currentToolTex->id == 0) return;
+
+    // --- Configuration ---
+    Vector2 toolOffset = { 0.0f, 0.0f };
+    float toolSize     = 12.0f; 
+
+    Vector2 dir = mMovement;
+
+    if (dir.x == 0.0f && dir.y == 0.0f) {
+        if (mDirection == LEFT)      dir.x = -1.0f;
+        if (mDirection == RIGHT)     dir.x =  1.0f;
+        if (mDirection == UP)        dir.y = -1.0f;
+        if (mDirection == DOWN)      dir.y =  1.0f;
+    }
+
+    if (dir.x < 0.0f) {
+        toolOffset = { -16.0f, -8.0f };
+    }
+    else if (dir.x > 0.0f) {
+        toolOffset = { 16.0f, -8.0f };
+    }
+    else if (dir.y < 0.0f) {
+        toolOffset = { 0.0f, -24.0f };
+    }
+    else if (dir.y > 0.0f) {
+        toolOffset = { 0.0f, 6.0f };
+    }
+
+    Vector2 drawPos = { mPosition.x + toolOffset.x, mPosition.y + toolOffset.y };
+
+    Rectangle sourceRec = { 0.0f, 0.0f, (float)currentToolTex->width, (float)currentToolTex->height };
+    Rectangle destRec = { drawPos.x, drawPos.y, toolSize, toolSize };
+    Vector2 origin = { toolSize / 2.0f, toolSize / 2.0f }; 
+
+    DrawTexturePro(*currentToolTex, sourceRec, destRec, origin, 0, WHITE);
+}
+
 void Entity::render()
 {
     if(mEntityStatus == INACTIVE) return;
 
     Rectangle textureArea;
-
     switch (mTextureType)
     {
         case SINGLE:
-            textureArea = {
-                0.0f, 0.0f,
-
-                static_cast<float>(mTexture.width),
-                static_cast<float>(mTexture.height)
-            };
+            textureArea = { 0.0f, 0.0f, static_cast<float>(mTexture.width), static_cast<float>(mTexture.height) };
             break;
         case ATLAS:
-            textureArea = getUVRectangle(
-                &mTexture, 
-                mAnimationIndices[mCurrentFrameIndex], 
-                mSpriteSheetDimensions.x, 
-                mSpriteSheetDimensions.y
-            );
-        
+            textureArea = getUVRectangle(&mTexture, mAnimationIndices[mCurrentFrameIndex], mSpriteSheetDimensions.x, mSpriteSheetDimensions.y);
+            break;
         default: break;
     }
 
-    Rectangle destinationArea = {
-        mPosition.x,
-        mPosition.y,
-        static_cast<float>(mScale.x),
-        static_cast<float>(mScale.y)
-    };
+    Rectangle destinationArea = { mPosition.x, mPosition.y, static_cast<float>(mScale.x), static_cast<float>(mScale.y) };
 
     Vector2 originOffset;
-
     if (mEntityType == PROP) {
-        originOffset = {
-            static_cast<float>(mScale.x) / 2.0f, 
-            static_cast<float>(mScale.y) - (mColliderDimensions.y / 2.0f)
-        };
-    } else if (mEntityType == COLLECTIBLE || mEntityType == BUG || mEntityType == FISH) {
-        originOffset = {
-            static_cast<float>(mScale.x) / 2.0f,
-            static_cast<float>(mScale.y) / 2.0f
-        };
+        originOffset = { static_cast<float>(mScale.x) / 2.0f, static_cast<float>(mScale.y) - (mColliderDimensions.y / 2.0f) };
     } else if (mEntityType == PLAYER) {
-        originOffset = {
-            static_cast<float>(mScale.x) / 2.0f,
-            static_cast<float>(mScale.y) / 2.0f + (mColliderDimensions.y * 1.5f) 
-        };
+        originOffset = { static_cast<float>(mScale.x) / 2.0f, static_cast<float>(mScale.y) / 2.0f + (mColliderDimensions.y * 1.5f) };
     } else {
-        originOffset = {
-            static_cast<float>(mScale.x) / 2.0f,
-            static_cast<float>(mScale.y) / 2.0f
-        };
+        originOffset = { static_cast<float>(mScale.x) / 2.0f, static_cast<float>(mScale.y) / 2.0f };
     }
 
-    DrawTexturePro(
-        mTexture, 
-        textureArea, destinationArea, originOffset,
-        mAngle, WHITE
-    );
+    bool holdingTool = (mEntityType == PLAYER && mEquippedTool != TOOL_NONE);
+    bool facingUp = (mDirection == UP || mDirection == UP_WALK);
+
+    if (holdingTool && facingUp) {
+        drawTool();
+    }
+
+    DrawTexturePro(mTexture, textureArea, destinationArea, originOffset, mAngle, WHITE);
+
+    if (holdingTool && !facingUp) {
+        drawTool();
+    }
 }
 
 void Entity::displayCollider() 
 {
-    // draw the collision box
     Rectangle colliderBox = {
         mPosition.x - mColliderDimensions.x / 2.0f,  
         mPosition.y - mColliderDimensions.y / 2.0f,  
@@ -560,7 +591,8 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                     if (mPosition.x < e->getPosition().x) e->setDirection(LEFT);
                     else e->setDirection(RIGHT);
 
-                    output = e->getDialogue();
+                    output = e->getNextDialogue();
+
                     break;
                 }
             }

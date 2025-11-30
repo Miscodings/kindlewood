@@ -1,5 +1,7 @@
 #include "LevelA.h"
 #include <algorithm>
+#include <vector>
+#include "raymath.h" 
 
 LevelA::LevelA()                              : Scene { {0.0f}, nullptr   } {}
 LevelA::LevelA(Vector2 origin, const char *bgHexCode) : Scene { origin, bgHexCode } {}
@@ -45,10 +47,9 @@ void LevelA::initialise()
    mGameState.map->addTileset("assets/game/Animation_Flowers_Red.png",     flowerStart);
    mGameState.map->addTileset("assets/game/Animation_Flowers_White.png",   flowerWhiteStart);
 
+   // Adjust IDs for the Map renderer logic
    for(unsigned int &id : mDataGround) {
-      if (id != 0) {
-         id += 1;
-      }
+      if (id != 0) id += 1;
    }
 
    for(unsigned int &id : mDataWater) {
@@ -92,12 +93,19 @@ void LevelA::initialise()
 
    mGameState.player = new Entity(
       {mOrigin.x + 30.0f, mOrigin.y + 30.0f},   // Spawn position
-      {24.0f, 24.0f},                           // Scale (32px is 2 tiles wide)
+      {24.0f, 24.0f},                           // Scale 
       "assets/game/character.png",              // Texture
       ATLAS,                                    
       { 4, 3 },                                 
       playerAnimationAtlas,                    
       PLAYER                                    
+   );
+   
+   // --- LOAD 3 DISTINCT TEXTURES ---
+   mGameState.player->loadToolTextures(
+      "assets/game/net.png", 
+      "assets/game/axe.png", 
+      "assets/game/rod.png"
    );
    
    mGameState.player->setColliderDimensions({
@@ -108,8 +116,8 @@ void LevelA::initialise()
    mGameState.player->setPosition({268, 105});
    mGameState.player->setSpeed(50.0f);
 
-   buildForest();
    buildVillage();
+   buildForest(); 
    spawnNPCs();
 
    mGameState.camera = { 0 };                                     
@@ -138,8 +146,6 @@ void LevelA::update(float deltaTime)
       }
    }
 
-   // Pause updates if chatting
-   // Input for closing chat is handled in main.cpp
    if (mIsChatting) return;
 
    mGameState.player->update(deltaTime, mGameState.player, mGameState.map, mGameState.entities);
@@ -173,7 +179,6 @@ void LevelA::update(float deltaTime)
    float minY = mapTop + screenHeight / 2.0f;
    float maxY = mapBottom - screenHeight / 2.0f;
 
-   // Prevent camera from inverting if screen is bigger than map
    if (minX > maxX) minX = maxX = (mapLeft + mapRight) / 2.0f;
    if (minY > maxY) minY = maxY = (mapTop + mapBottom) / 2.0f;
 
@@ -200,7 +205,6 @@ void LevelA::render()
 
    for (Entity* e : renderQueue) {
          e->render();
-         // e->displayCollider();
    }
 
    EndMode2D();
@@ -240,7 +244,6 @@ void LevelA::render()
       }
 
       DrawText(messageContent.c_str(), 70, 490, 24, WHITE);
-
       DrawText(">>", 900, 550, 20, (int)GetTime() % 2 == 0 ? WHITE : GRAY);
    }
 }
@@ -257,28 +260,82 @@ void LevelA::buildForest()
 {
    float mapX = mGameState.map->getLeftBoundary();
    float mapY = mGameState.map->getTopBoundary();
+   
+   // Minimum distance between trees (approx 2.5 tiles)
+   float minSpacing = 40.0f;
 
-   std::vector<Vector2> treePositions = {
-      {50, 35}, {90, 25}, {130, 30}, {170, 25}, {210, 31}, {250, 28}, {290, 30}, {330, 37}, {370, 23}, {410, 40},
+   // Define collision zones for buildings (based on buildVillage coordinates)
+   std::vector<Rectangle> buildingZones = {
+       {90, 95, 100, 100},   // House 1
+       {400, 350, 100, 100}, // House 2
+       {550, 150, 100, 100}, // House 3
+       {140, 405, 100, 100}  // Store
    };
 
+   // Iterate through all tiles
+   for (int y = 0; y < LEVEL_HEIGHT; y++) {
+      for (int x = 0; x < LEVEL_WIDTH; x++) {
+         int index = y * LEVEL_WIDTH + x;
+
+         // 1. Terrain Check: No trees on water, roads, or flowers
+         if (mDataWater[index] != 173 && mDataWater[index] != 0) continue;
+         if (mDataRoad[index] != 47 && mDataRoad[index] != 0) continue;
+         if (mDataFlowers[index] != 0) continue;
+
+         // 2. Random Chance Check: Reduced to 4% for sparser forest
+         if (GetRandomValue(0, 100) > 4) continue;
+
+         // Calculate potential pixel position
+         float pixelX = x * TILE_DIMENSION;
+         float pixelY = y * TILE_DIMENSION;
+         
+         // 3. Building Proximity Check
+         Rectangle treeRect = {pixelX, pixelY, TILE_DIMENSION, TILE_DIMENSION};
+         bool hitsBuilding = false;
+         for (const auto& zone : buildingZones) {
+             if (CheckCollisionRecs(treeRect, zone)) {
+                 hitsBuilding = true;
+                 break;
+             }
+         }
+         if (hitsBuilding) continue;
+
+         // 4. Clumping/Spacing Check
+         // Add a small random offset so trees aren't perfectly grid-aligned
+         float offsetX = (float)GetRandomValue(-4, 4);
+         float offsetY = (float)GetRandomValue(-4, 4);
+         Vector2 candidatePos = {mapX + pixelX + offsetX, mapY + pixelY + offsetY};
+
+         bool tooClose = false;
+         // Check against existing entities (houses and previously placed trees)
+         for (Entity* e : mGameState.entities) {
+             if (Vector2Distance(e->getPosition(), candidatePos) < minSpacing) {
+                 tooClose = true;
+                 break;
+             }
+         }
+         if (tooClose) continue;
+
+         // --- Spawn Tree ---
+         int variant = GetRandomValue(1, 4); 
+         const char* path = TextFormat("assets/game/tree_%d.png", variant);
+         
+         Entity* tree = new Entity(
+            candidatePos,
+            {32.0f, 48.0f},
+            path,
+            PROP
+         );
+         tree->setColliderDimensions({10.0f, 20.0f}); 
+         mGameState.entities.push_back(tree);
+      }
+   }
+
+   // --- Helper Props (Rocks, etc) ---
+   // Note: We place rocks manually, or we could use the same logic as trees
    std::vector<Vector2> rockPositions = {
       {300, 300}, {450, 200}, {50, 500}
    };
-
-   for (Vector2 pos : treePositions) {
-      int variant = GetRandomValue(1, 4); 
-      const char* path = TextFormat("assets/game/tree_%d.png", variant);
-
-      Entity* tree = new Entity(
-         {mapX + pos.x, mapY + pos.y},    // Spawn position
-         {32.0f, 48.0f},                  // Scale
-         path,                            // Texture
-         PROP
-      );
-      tree->setColliderDimensions({10.0f, 20.0f}); 
-      mGameState.entities.push_back(tree);
-   }
 
    for (Vector2 pos : rockPositions) {
       int variant = GetRandomValue(1, 5);
@@ -294,17 +351,7 @@ void LevelA::buildForest()
       mGameState.entities.push_back(rock);
    }
 
-   std::map<Direction, std::vector<int>> bugAnims = {
-       {LEFT,       {18, 19, 20}},
-       {RIGHT,      {6, 7, 8}},
-       {UP,         {0, 1, 2}},
-       {DOWN,       {12, 13, 14}},
-       {LEFT_WALK,  {18, 19, 20}},
-       {RIGHT_WALK, {6, 7, 8}},
-       {UP_WALK,    {0, 1, 2}},
-       {DOWN_WALK,  {12, 13, 14}}
-   };
-
+   // --- Bugs and Fish ---
    for(int i = 0; i < 4; i++) {
       spawnBug();
    }
@@ -359,26 +406,43 @@ void LevelA::spawnNPCs()
    float mapX = mGameState.map->getLeftBoundary();
    float mapY = mGameState.map->getTopBoundary();
 
-   std::map<Direction, std::vector<int>> npcAnim = {
-      {LEFT, { 0, 1, 2, 3 }},
-      {RIGHT, { 6, 7, 8, 9 }}
+   std::map<Direction, std::vector<int>> npcAnimationAtlas = {
+      {DOWN,  { 1 }},
+      {DOWN_WALK, { 0, 1, 2 }},
+      {UP,  { 10 }},
+      {UP_WALK, { 9, 10, 11 }},
+      {LEFT,  { 4 }},
+      {LEFT_WALK, { 3, 4, 5 }},
+      {RIGHT,  { 7 }},
+      {RIGHT_WALK, { 6, 7, 8 }},
    };
 
-   Entity* bob = new Entity(
-      {mapX + 300, mapY + 300},
-      {50.0f, 32.0f},
-      "assets/game/boar_walk.png",
-      ATLAS, {2, 6}, npcAnim,
-      NPC
+   Entity* sally = new Entity(
+      {mapX + 600, mapY + 300},
+      {24.0f, 24.0f},
+      "assets/game/npc_1.png",
+      ATLAS, {4, 3},
+      npcAnimationAtlas,                    
+      NPC                                    
    );
    
-   bob->setSpeed(20.0f);
-   bob->setColliderDimensions({30.0f, 16.0f}); 
-   bob->setAIType(WANDERER);
-   bob->setAIState(WALKING);
-   bob->setDialogue("Bob|Welcome to Kindlewood! Watch out for bees.");
+   sally->setColliderDimensions({
+      sally->getScale().x / 4.0f,
+      sally->getScale().y / 3.5f
+   });
+
+   sally->setPosition({400, 105});
+   sally->setSpeed(50.0f);
+   sally->setAIType(WANDERER);
+   sally->setAIState(WALKING);
+   sally->setDialogue({
+      "Sally|hey there! you're new around here, right?",
+      "Sally|your house is just south of here.",
+      "Sally|if you're stuck, talk to folks in town. we help out.",
+      "Sally|oh, and watch the bees. seriously."
+   });
    
-   mGameState.entities.push_back(bob);
+   mGameState.entities.push_back(sally);
 }
 
 void LevelA::spawnBug()

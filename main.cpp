@@ -62,7 +62,7 @@ void initialise()
     gLevels.push_back(gLevel0);
     gLevels.push_back(gLevelA);
 
-    switchToScene(gLevels[0]);
+    switchToScene(gLevels[2]);
 
     gEffects = new Effects(ORIGIN, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
     gEffects->start(FADEIN); // Fade into the intro
@@ -78,7 +78,7 @@ void processInput()
     if (gCurrentScene->isChatting()) 
     {
         if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
-            gCurrentScene->stopChat();
+            gCurrentScene->advanceChat();
         }
         return;
     }

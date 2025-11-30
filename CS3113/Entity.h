@@ -34,6 +34,12 @@ private:
     Vector2 mColliderDimensions;
     
     Texture2D mTexture;
+    
+    // --- DISTINCT TOOL TEXTURES ---
+    Texture2D mTextureNet;
+    Texture2D mTextureAxe;
+    Texture2D mTextureRod;
+
     TextureType mTextureType;
     Vector2 mSpriteSheetDimensions;
     
@@ -80,6 +86,12 @@ private:
     void AIActivate(Entity *target, Map* map); 
     void AIWander(Map* map);
     void AIFollow(Entity *target);
+
+    // Helper to draw the tool
+    void drawTool();
+
+    std::vector<std::string> mDialogueLines;
+    int mDialogueIndex = 0;
 
 public:
     static constexpr int   DEFAULT_SIZE          = 250;
@@ -151,6 +163,14 @@ public:
         { mScale = newScale;                       }
     void setTexture(const char *textureFilepath)
         { mTexture = LoadTexture(textureFilepath); }
+    
+    // New function to load 3 separate images
+    void loadToolTextures(const char* netPath, const char* axePath, const char* rodPath) {
+        mTextureNet = LoadTexture(netPath);
+        mTextureAxe = LoadTexture(axePath);
+        mTextureRod = LoadTexture(rodPath);
+    }
+
     void setColliderDimensions(Vector2 newDimensions) 
         { mColliderDimensions = newDimensions;     }
     void setSpriteSheetDimensions(Vector2 newDimensions) 
@@ -182,8 +202,17 @@ public:
     int getMoney() const { return mMoney; }
     int getInventorySize() const { return mInventory.size(); }
     
-    void setDialogue(std::string text) { mDialogueText = text; }
-    std::string getDialogue() const { return mDialogueText; }
+    void setDialogue(const std::vector<std::string>& lines) {
+        mDialogueLines = lines;
+        mDialogueIndex = 0;
+    }
+
+    std::string getNextDialogue() {
+        if (mDialogueLines.empty()) return "";
+        std::string line = mDialogueLines[mDialogueIndex];
+        mDialogueIndex = (mDialogueIndex + 1) % mDialogueLines.size(); // loops
+        return line;
+    }
     
     void cycleTool() {
         int t = (int)mEquippedTool + 1;
