@@ -23,7 +23,7 @@ void LevelA::initialise()
    mGameState.nextSceneID = -1; 
    
    mGameState.bgm1 = LoadMusicStream("assets/game/music_level1.wav");
-   SetMusicVolume(mGameState.bgm1, 0.02f);
+   SetMusicVolume(mGameState.bgm1, 0.7f);
    PlayMusicStream(mGameState.bgm1);
 
    mGameState.map = new Map(

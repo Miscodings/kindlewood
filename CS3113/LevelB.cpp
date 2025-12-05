@@ -10,7 +10,9 @@ LevelB::~LevelB() { shutdown(); }
 void LevelB::initialise()
 {
    mGameState.nextSceneID = -1;
-   mGameState.bgm1 = LoadMusicStream("assets/game/music_level1.wav");
+   mGameState.bgm1 = LoadMusicStream("assets/game/music_level3.mp3");
+   SetMusicVolume(mGameState.bgm1, 0.7f);
+   PlayMusicStream(mGameState.bgm1);
 
    mGameState.map = new Map(
       LEVEL_WIDTH, LEVEL_HEIGHT,
@@ -151,7 +153,7 @@ void LevelB::initialise()
    };
 
    Entity* shopkeeper = new Entity(
-      Vector2{mOrigin.x, mOrigin.y - 50.0f},
+      Vector2{mOrigin.x, mOrigin.y - 42.0f},
       Vector2{24.0f, 24.0f},
       "assets/game/npc_1.png",
       ATLAS, {4, 3},

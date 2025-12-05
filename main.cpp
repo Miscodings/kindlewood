@@ -14,6 +14,7 @@
 #include "CS3113/IntroScene.h"
 #include "CS3113/ShaderProgram.h"
 #include "CS3113/Effects.h"
+#include "CS3113/Entity.h" 
 
 // Global Constants
 constexpr int SCREEN_WIDTH     = 1000,
@@ -62,6 +63,7 @@ void initialise()
 {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Kindlewood Village");
     InitAudioDevice();
+    Entity::loadEntitySounds();
 
     gShader.load("shaders/vertex.glsl", "shaders/fragment.glsl");
 
@@ -75,7 +77,7 @@ void initialise()
     gLevels.push_back(gLevelA);
     gLevels.push_back(gLevelB);
 
-    switchToScene(gLevels[2]);
+    switchToScene(gLevels[0]);
 
     gEffects = new Effects(ORIGIN, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
     gEffects->start(FADEIN); // Fade into the intro
@@ -194,6 +196,7 @@ void shutdown()
 
     delete gEffects;
     gEffects = nullptr;
+    Entity::unloadEntitySounds();
 
     gShader.unload();
 

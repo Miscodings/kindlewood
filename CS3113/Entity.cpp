@@ -8,6 +8,12 @@ std::vector<Entity::CropSaveData> Entity::sGlobalCrops = {};
 int Entity::sGlobalDayCount = 1;
 float Entity::sGlobalTimeOfDay = 0.0f;
 
+Sound Entity::sfxPickup = { 0 };
+Sound Entity::sfxDoor = { 0 };
+Sound Entity::sfxTill = { 0 };
+Sound Entity::sfxCatch = { 0 };
+Sound Entity::sfxMoney = { 0 };
+
 Entity::Entity() 
     : mPosition {0.0f, 0.0f}, mMovement {0.0f, 0.0f}, 
       mVelocity {0.0f, 0.0f}, mAcceleration {0.0f, 0.0f},
@@ -506,6 +512,7 @@ void Entity::sellItems()
 
     mMoney += totalValue;
     mInventory.clear();
+    PlaySound(sfxMoney);
 
     std::cout << "Sold items for $" << totalValue << ". Total: $" << mMoney << std::endl;
 }
@@ -557,6 +564,7 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                 mInventory.push_back({ ITEM_APPLE, 10 });
                 delete e;
                 it = worldEntities.erase(it);
+                PlaySound(sfxPickup);
                 output = "Picked up an Apple";
                 break; 
             } else { ++it; }
@@ -609,6 +617,7 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                                 e->mGrowthStage = 0;
                                 e->setWatered(false);
                                 output = "Harvested!";
+                                PlaySound(sfxPickup);
                             }
                         }
                         break; 
@@ -636,12 +645,14 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                             e->mGrowthStage = 0; 
                             mInventory.erase(mInventory.begin() + seedIndex);
                             output = "Planted seeds.";
+                            PlaySound(sfxTill);
                         } else {
                             if (mEquippedTool == TOOL_NONE) {
                                 delete e;
                                 it = worldEntities.erase(it);
                                 output = "Covered soil.";
                                 return output; 
+                                PlaySound(sfxTill);
                             } else {
                                 output = "No seeds in bag.";
                                 break;
@@ -668,6 +679,7 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                                 mMoney -= cost;
                                 mInventory.push_back({ (ItemType)enumId, 0 });
                                 output = "Bought " + seedName;
+                                PlaySound(sfxMoney);
                             }
                         } else {
                             output = "Not enough money!";
@@ -675,6 +687,7 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                         break; 
                     }
                     else if (data == "ACTION_ENTER_HOUSE") {
+                        PlaySound(sfxDoor);
                         output = "ACTION_ENTER_HOUSE"; // Signal to Scene
                         break;
                     }
@@ -716,6 +729,7 @@ std::string Entity::useTool(std::vector<Entity*>& worldEntities, Map* map)
                     mInventory.push_back({ ITEM_BUTTERFLY, 150 }); 
                     delete e;
                     it = worldEntities.erase(it);
+                    PlaySound(sfxCatch);
                     return "Caught a Bug!";
                 }
             }
@@ -757,6 +771,7 @@ std::string Entity::useTool(std::vector<Entity*>& worldEntities, Map* map)
                 mInventory.push_back({ ITEM_BASS, 300 }); 
                 mFishOnHook = false;
                 int prob = GetRandomValue(0, 15);
+                PlaySound(sfxCatch);
 
                 if (prob == 1) {
                     return "I caught a bitterling! What's it so bitter about?";
@@ -832,6 +847,7 @@ std::string Entity::useTool(std::vector<Entity*>& worldEntities, Map* map)
             );
             crop->setColliderDimensions({14, 14});
             worldEntities.push_back(crop);
+            PlaySound(sfxTill);
             return "Tilled soil.";
         }
         return "Blocked.";

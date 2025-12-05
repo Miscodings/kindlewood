@@ -10,7 +10,7 @@ void IntroScene::initialise()
     mGameState.nextSceneID = -1;
     mGameState.bgm1 = LoadMusicStream("assets/game/music_intro.mp3");
     mGameState.bgm2 = LoadMusicStream("assets/game/music_level2.wav");
-    mGameState.sfx_1 = LoadSound("assets/game/sfx-click.mp3");
+    mGameState.sfx_1 = LoadSound("assets/game/sfx_click.mp3");
     SetMusicVolume(mGameState.bgm1, 0.7f);
     PlayMusicStream(mGameState.bgm1);
     PlayMusicStream(mGameState.bgm2);
