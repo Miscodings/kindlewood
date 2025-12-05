@@ -23,7 +23,7 @@ void LevelA::initialise()
    mGameState.nextSceneID = -1; 
    
    mGameState.bgm1 = LoadMusicStream("assets/game/music_level1.wav");
-   SetMusicVolume(mGameState.bgm1, 0.7f);
+   SetMusicVolume(mGameState.bgm1, 0.9f);
    PlayMusicStream(mGameState.bgm1);
 
    mGameState.map = new Map(
@@ -281,7 +281,7 @@ void LevelA::render()
 
    DrawText(TextFormat("Money: $%d", money), 20, 20, 30, GOLD);
    DrawText(TextFormat("Tool: %s (TAB)", toolName.c_str()), 20, 60, 20, YELLOW);
-   DrawText("SPACE: Use Tool | E: Interact | P: Sell", 20, 90, 10, LIGHTGRAY);
+   DrawText("SPACE: Interact | P: Sell", 20, 90, 10, LIGHTGRAY);
 
    if (mIsChatting) {
       DrawRectangle(50, 450, 900, 130, Fade(BLACK, 0.8f));

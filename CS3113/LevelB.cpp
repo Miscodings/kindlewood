@@ -191,7 +191,7 @@ void LevelB::update(float deltaTime)
    if (mGameState.player->getPosition().y > mGameState.map->getBottomBoundary() - 20)
    {
       mGameState.player->savePlayerData();
-      Entity::setGlobalSpawnPosition({340.0f, 410.0f}); 
+      Entity::setGlobalSpawnPosition({340.0f, 420.0f}); 
       mGameState.nextSceneID = 2;
    }
 
@@ -232,7 +232,7 @@ void LevelB::render()
 
    DrawText(TextFormat("Money: $%d", money), 20, 20, 30, GOLD);
    DrawText(TextFormat("Tool: %s (TAB)", toolName.c_str()), 20, 60, 20, YELLOW);
-   DrawText("SPACE: Use Tool | E: Interact | P: Sell", 20, 90, 10, LIGHTGRAY);
+   DrawText("SPACE: Interact | P: Sell", 20, 90, 10, LIGHTGRAY);
 
    if (mIsChatting)
    {
