@@ -10,26 +10,16 @@ void IntroScene::initialise()
     mGameState.nextSceneID = -1;
     
     mStoryLines = {
-        // "Dear Friend...",
-        // "It has been too long since I've seen you.",
-        // "I heard you were looking for a change of pace.",
-        // "A place where the breeze smells like apples...",
-        // "And the rivers sparkle in the morning sun.",
-        // "Welcome to Kindlewood Sanctuary.",
-        // "It's a little overgrown right now, I admit.",
-        // "But with a little love, it could be home.",
-        // "The bus is arriving now...",
-        // "Are you ready to say hello?"
-        "Hi...",
-        "This game is so unfinished, it's not even funny.",
-        "It's supposed to be an Animal Crossing clone.",
-        "All you can do now is navigate a botched map,",
-        "catch bugs by equipping your net (Press TAB),",
-        "interact with one singular mis-shaped NPC,",
-        "shake trees by pressing SPACE, and that's it.",
-        "In the future, there will be fishing,",
-        "a time system, more interactions/NPCs,",
-        "and hopefully some more buildings and stuff."
+        "Dear Friend...",
+        "I heard you were looking for a change of pace.",
+        "A place where the breeze smells like apples...",
+        "And the rivers sparkle in the morning sun.",
+        "I'd like to welcome you to a new beginning.",
+        "Experience the cozy, outdoor lifestyle.",
+        "Earn money selling bugs and fish you catch...",
+        "Or start up a farm of your own..."
+        "Whatever you choose, you'll love it here..."
+        "Welcome to Kindlewood Village.",
     };
 
     mCurrentLineIndex = 0;
@@ -68,7 +58,7 @@ void IntroScene::update(float deltaTime)
     }
 
     if (mIsFinished) {
-        mGameState.nextSceneID = 1; // Go to LevelA
+        mGameState.nextSceneID = 1;
     }
 }
 
@@ -82,7 +72,7 @@ void IntroScene::render()
     int yPos = (GetScreenHeight() - boxHeight) / 2;
 
     DrawRectangle(xPos, yPos, boxWidth, boxHeight, Fade(DARKGRAY, 0.5f)); 
-    DrawRectangleLines(xPos, yPos, boxWidth, boxHeight, WHITE); // Add a border
+    DrawRectangleLines(xPos, yPos, boxWidth, boxHeight, WHITE);
 
     int fontSize = 30;
     int textWidth = MeasureText(mDisplayedText.c_str(), fontSize);

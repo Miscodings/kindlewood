@@ -9,68 +9,68 @@ LevelB::~LevelB() { shutdown(); }
 
 void LevelB::initialise()
 {
-    mGameState.nextSceneID = -1;
-    mGameState.bgm = LoadMusicStream("assets/game/music_level1.wav");
+   mGameState.nextSceneID = -1;
+   mGameState.bgm = LoadMusicStream("assets/game/music_level1.wav");
 
-    mGameState.map = new Map(
-        LEVEL_WIDTH, LEVEL_HEIGHT,
-        TILE_DIMENSION,
-        mOrigin
-    );
+   mGameState.map = new Map(
+      LEVEL_WIDTH, LEVEL_HEIGHT,
+      TILE_DIMENSION,
+      mOrigin
+   );
 
-    mGameState.map->addTileset("assets/game/Tileset_Interior.png", 1);
+   mGameState.map->addTileset("assets/game/Tileset_Interior.png", 1);
 
-    mGameState.map->addLayer(
-        std::vector<unsigned int>(std::begin(floor), std::end(floor)),
-        false
-    );
-    mGameState.map->addLayer(
-        std::vector<unsigned int>(std::begin(walls), std::end(walls)),
-        true
-    );
+   mGameState.map->addLayer(
+      std::vector<unsigned int>(std::begin(floor), std::end(floor)),
+      false
+   );
+   mGameState.map->addLayer(
+      std::vector<unsigned int>(std::begin(walls), std::end(walls)),
+      true
+   );
 
-    std::map<Direction, std::vector<int>> playerAnimationAtlas = {
-        {DOWN,      { 1 }},
-        {DOWN_WALK, { 0, 1, 2 }},
-        {UP,        { 10 }},
-        {UP_WALK,   { 9, 10, 11 }},
-        {LEFT,      { 4 }},
-        {LEFT_WALK, { 3, 4, 5 }},
-        {RIGHT,     { 7 }},
-        {RIGHT_WALK,{ 6, 7, 8 }},
-    };
+   std::map<Direction, std::vector<int>> playerAnimationAtlas = {
+      {DOWN,      { 1 }},
+      {DOWN_WALK, { 0, 1, 2 }},
+      {UP,        { 10 }},
+      {UP_WALK,   { 9, 10, 11 }},
+      {LEFT,      { 4 }},
+      {LEFT_WALK, { 3, 4, 5 }},
+      {RIGHT,     { 7 }},
+      {RIGHT_WALK,{ 6, 7, 8 }},
+   };
 
-    mGameState.player = new Entity(
-        { mOrigin.x, mOrigin.y + 75.0f},    // spawn at map center (safe)
-        { 24.0f, 24.0f },            // Scale
-        "assets/game/character.png", // Texture
-        ATLAS,
-        { 4, 3 },
-        playerAnimationAtlas,
-        PLAYER
-    );
+   mGameState.player = new Entity(
+      { mOrigin.x, mOrigin.y + 75.0f},
+      { 24.0f, 24.0f },            // Scale
+      "assets/game/character.png", // Texture
+      ATLAS,
+      { 4, 3 },
+      playerAnimationAtlas,
+      PLAYER
+   );
 
-    mGameState.player->loadToolTextures(
-        "assets/game/net.png",
-        "assets/game/rod.png",
-        "assets/game/bucket.png",
-        "assets/game/hoe.png"
-    );
+   mGameState.player->loadToolTextures(
+      "assets/game/net.png",
+      "assets/game/rod.png",
+      "assets/game/bucket.png",
+      "assets/game/hoe.png"
+   );
 
-    mGameState.player->loadPlayerData();
+   mGameState.player->loadPlayerData();
 
-    mGameState.player->setColliderDimensions({
-        mGameState.player->getScale().x / 4.0f,
-        mGameState.player->getScale().y / 3.5f
-    });
+   mGameState.player->setColliderDimensions({
+      mGameState.player->getScale().x / 4.0f,
+      mGameState.player->getScale().y / 3.5f
+   });
 
-    mGameState.player->setSpeed(50.0f);
+   mGameState.player->setSpeed(50.0f);
 
-    mGameState.camera = { 0 };
-    mGameState.camera.target = mGameState.player->getPosition();
-    mGameState.camera.offset = mOrigin;
-    mGameState.camera.rotation = 0.0f;
-    mGameState.camera.zoom = 4.0f;
+   mGameState.camera = { 0 };
+   mGameState.camera.target = mGameState.player->getPosition();
+   mGameState.camera.offset = mOrigin;
+   mGameState.camera.rotation = 0.0f;
+   mGameState.camera.zoom = 4.0f;
 
    float mapX = mOrigin.x;
    float mapY = mOrigin.y;
@@ -252,7 +252,7 @@ void LevelB::render()
 
       DrawText(messageContent.c_str(), 70, 490, 24, WHITE);
       DrawText(">>", 900, 550, 20, (int)GetTime() % 2 == 0 ? WHITE : GRAY);
-      return; // Don't draw inventory while chatting
+      return;
    }
 
    const int SLOT_SIZE     = 40;
@@ -311,35 +311,35 @@ void LevelB::render()
                default: break;
          }
          DrawRectangle(x + 8, y + 8, 24, 24, itemColor);
-         DrawText(itemText, x + 10, y + 12, 10, WHITE); // Centered Text
+         DrawText(itemText, x + 10, y + 12, 10, WHITE);
       }
    }
 }
 
 void LevelB::shutdown()
 {
-    if (mGameState.map) {
-        delete mGameState.map;
-        mGameState.map = nullptr;
-    }
+   if (mGameState.map) {
+      delete mGameState.map;
+      mGameState.map = nullptr;
+   }
 
-    if (mGameState.player) {
-        mGameState.player->savePlayerData();
-    }
+   if (mGameState.player) {
+      mGameState.player->savePlayerData();
+   }
 
-    if (mBackgroundTexture.id != 0) {
-        UnloadTexture(mBackgroundTexture);
-        mBackgroundTexture = { 0, 0 };
-    }
+   if (mBackgroundTexture.id != 0) {
+      UnloadTexture(mBackgroundTexture);
+      mBackgroundTexture = { 0, 0 };
+   }
 
-    UnloadMusicStream(mGameState.bgm);
+   UnloadMusicStream(mGameState.bgm);
 
-    if (mGameState.player) {
-        delete mGameState.player;
-        mGameState.player = nullptr;
-    }
-    for (Entity* e : mGameState.entities) {
-        if (e) delete e;
-    }
-    mGameState.entities.clear();
+   if (mGameState.player) {
+      delete mGameState.player;
+      mGameState.player = nullptr;
+   }
+   for (Entity* e : mGameState.entities) {
+      if (e) delete e;
+   }
+   mGameState.entities.clear();
 }

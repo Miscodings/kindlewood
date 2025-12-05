@@ -24,7 +24,7 @@ void LevelA::initialise()
    
    mGameState.bgm = LoadMusicStream("assets/game/music_level1.wav");
    SetMusicVolume(mGameState.bgm, 0.02f);
-//   PlayMusicStream(mGameState.bgm);
+   PlayMusicStream(mGameState.bgm);
 
    mGameState.jumpSound = LoadSound("assets/game/step.ogg");
    mGameState.hurtSound = LoadSound("assets/game/hurt.ogg");
@@ -48,13 +48,13 @@ void LevelA::initialise()
    mGameState.map->addTileset("assets/game/Animation_Flowers_Red.png",     flowerStart);
    mGameState.map->addTileset("assets/game/Animation_Flowers_White.png",   flowerWhiteStart);
 
-   // --- FIX: Create Local Copies so we don't corrupt the master data ---
+   // create local copies to not fuck up master data
    std::vector<unsigned int> groundMap = mDataGround;
    std::vector<unsigned int> waterMap  = mDataWater;
    std::vector<unsigned int> roadMap   = mDataRoad;
    std::vector<unsigned int> flowerMap = mDataFlowers;
 
-   // Adjust IDs on the LOCAL copies
+   // ONLY CHANGE IDS ON LOCAL COPIES!!!!!
    for(unsigned int &id : groundMap) {
       if (id != 0) id += 1;
    }
@@ -98,14 +98,12 @@ void LevelA::initialise()
       {RIGHT_WALK, { 6, 7, 8 }},
    };
 
-   // --- POSITIONING LOGIC ---
-   Vector2 spawnPos = {268, 105}; // Default start
+   Vector2 spawnPos = {268, 105};
    
-   // Check if we returned from the house (Global Spawn override)
    Vector2 savedPos = Entity::getGlobalSpawnPosition();
    if (savedPos.x != -1.0f) {
        spawnPos = savedPos;
-       Entity::setGlobalSpawnPosition({-1.0f, -1.0f}); // Reset after use
+       Entity::setGlobalSpawnPosition({-1.0f, -1.0f});
    }
 
    mGameState.player = new Entity(
@@ -166,7 +164,6 @@ void LevelA::update(float deltaTime)
 {
    UpdateMusicStream(mGameState.bgm);
 
-   // --- BUG RESPAWN LOGIC ---
    int bugCount = 0;
    for (Entity* e : mGameState.entities) {
       if (e->getEntityType() == BUG && e->isActive()) {
@@ -246,136 +243,129 @@ void LevelA::update(float deltaTime)
 
 void LevelA::render()
 {
-    // --- WORLD RENDER ---
-    ClearBackground(ColorFromHex(mBGColourHexCode));
-    BeginMode2D(mGameState.camera);
+   ClearBackground(ColorFromHex(mBGColourHexCode));
+   BeginMode2D(mGameState.camera);
 
-    if (mGameState.map) mGameState.map->render();
+   if (mGameState.map) mGameState.map->render();
 
-    // Sort entities by Y position for depth
-    std::vector<Entity*> renderQueue;
-    if (mGameState.player) renderQueue.push_back(mGameState.player);
-    for (auto& entity : mGameState.entities) {
-        renderQueue.push_back(entity);
-    }
+   std::vector<Entity*> renderQueue;
+   if (mGameState.player) renderQueue.push_back(mGameState.player);
+   for (auto& entity : mGameState.entities) {
+      renderQueue.push_back(entity);
+   }
 
-    std::sort(renderQueue.begin(), renderQueue.end(), [](Entity* a, Entity* b) {
-        return a->getPosition().y < b->getPosition().y;
-    });
+   std::sort(renderQueue.begin(), renderQueue.end(), [](Entity* a, Entity* b) {
+      return a->getPosition().y < b->getPosition().y;
+   });
 
-    for (Entity* e : renderQueue) {
-        e->render();
-    }
+   for (Entity* e : renderQueue) { e->render(); }
 
-    EndMode2D();
-    EndShaderMode();
-   
-    float alpha = 0.0f;
-    if (mTimeOfDay > 0.6f) {
-        alpha = (mTimeOfDay - 0.6f) * 2.5f; 
-        if (alpha > 0.75f) alpha = 0.75f; 
-    }
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(mNightColor, alpha));
+   EndMode2D();
+   EndShaderMode();
 
-    int hour = (int)(mTimeOfDay * 24.0f) + 6; // Start at 6:00 AM
-    if (hour >= 24) hour -= 24;
-    DrawText(TextFormat("Day %d | %02d:00", mDayCount, hour), GetScreenWidth() - 160, 20, 20, WHITE);
+   float alpha = 0.0f;
+   if (mTimeOfDay > 0.6f) {
+      alpha = (mTimeOfDay - 0.6f) * 2.5f; 
+      if (alpha > 0.75f) alpha = 0.75f; 
+   }
+   DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(mNightColor, alpha));
 
-    int money = mGameState.player->getMoney();
-   
-    std::string toolName = "Hands";
-    ToolType t = mGameState.player->getTool();
-    if (t == TOOL_NET) toolName = "Net";
-    else if (t == TOOL_ROD) toolName = "Fishing Rod";
-    else if (t == TOOL_HOE) toolName = "Hoe";
-    else if (t == TOOL_WATERING_CAN) toolName = "Watering Can";
+   int hour = (int)(mTimeOfDay * 24.0f) + 6;
+   if (hour >= 24) hour -= 24;
+   DrawText(TextFormat("Day %d | %02d:00", mDayCount, hour), GetScreenWidth() - 160, 20, 20, WHITE);
 
-    DrawText(TextFormat("Money: $%d", money), 20, 20, 30, GOLD);
-    DrawText(TextFormat("Tool: %s (TAB)", toolName.c_str()), 20, 60, 20, YELLOW);
-    DrawText("SPACE: Use Tool | E: Interact | P: Sell", 20, 90, 10, LIGHTGRAY);
+   int money = mGameState.player->getMoney();
 
-    if (mIsChatting)
-    {
-        DrawRectangle(50, 450, 900, 130, Fade(BLACK, 0.8f));
-        DrawRectangleLines(50, 450, 900, 130, WHITE);
+   std::string toolName = "Hands";
+   ToolType t = mGameState.player->getTool();
+   if (t == TOOL_NET) toolName = "Net";
+   else if (t == TOOL_ROD) toolName = "Fishing Rod";
+   else if (t == TOOL_HOE) toolName = "Hoe";
+   else if (t == TOOL_WATERING_CAN) toolName = "Watering Can";
 
-        std::string speakerName = "";
-        std::string messageContent = mCurrentChatText;
-        
-        size_t splitPosition = mCurrentChatText.find('|');
-        if (splitPosition != std::string::npos) {
-            speakerName    = mCurrentChatText.substr(0, splitPosition);
-            messageContent = mCurrentChatText.substr(splitPosition + 1);
-        }
+   DrawText(TextFormat("Money: $%d", money), 20, 20, 30, GOLD);
+   DrawText(TextFormat("Tool: %s (TAB)", toolName.c_str()), 20, 60, 20, YELLOW);
+   DrawText("SPACE: Use Tool | E: Interact | P: Sell", 20, 90, 10, LIGHTGRAY);
 
-        if (!speakerName.empty()) {
-            DrawText(speakerName.c_str(), 70, 460, 20, YELLOW);
-        }
+   if (mIsChatting) {
+      DrawRectangle(50, 450, 900, 130, Fade(BLACK, 0.8f));
+      DrawRectangleLines(50, 450, 900, 130, WHITE);
 
-        DrawText(messageContent.c_str(), 70, 490, 24, WHITE);
-        DrawText(">>", 900, 550, 20, (int)GetTime() % 2 == 0 ? WHITE : GRAY);
-        return; // Don't draw inventory while chatting
-    }
+      std::string speakerName = "";
+      std::string messageContent = mCurrentChatText;
+      
+      size_t splitPosition = mCurrentChatText.find('|');
+      if (splitPosition != std::string::npos) {
+         speakerName    = mCurrentChatText.substr(0, splitPosition);
+         messageContent = mCurrentChatText.substr(splitPosition + 1);
+      }
 
-    const int SLOT_SIZE     = 40;
-    const int SLOT_PADDING  = 6;
-    const int NUM_SLOTS     = 9;
-    const int BAR_BOTTOM_MARGIN = 50;
+      if (!speakerName.empty()) {
+         DrawText(speakerName.c_str(), 70, 460, 20, YELLOW);
+      }
 
-    int screenWidth  = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
+      DrawText(messageContent.c_str(), 70, 490, 24, WHITE);
+      DrawText(">>", 900, 550, 20, (int)GetTime() % 2 == 0 ? WHITE : GRAY);
+      return;
+   }
 
-    int totalBarWidth = (NUM_SLOTS * SLOT_SIZE) + ((NUM_SLOTS - 1) * SLOT_PADDING);
-    int startX = (screenWidth - totalBarWidth) / 2;
-    int startY = screenHeight - BAR_BOTTOM_MARGIN - SLOT_SIZE;
+   const int SLOT_SIZE     = 40;
+   const int SLOT_PADDING  = 6;
+   const int NUM_SLOTS     = 9;
+   const int BAR_BOTTOM_MARGIN = 50;
 
-    const std::vector<Item>& inventory = mGameState.player->getInventory();
+   int screenWidth  = GetScreenWidth();
+   int screenHeight = GetScreenHeight();
 
-    for (int i = 0; i < NUM_SLOTS; i++)
-    {
-        int x = startX + i * (SLOT_SIZE + SLOT_PADDING);
-        int y = startY;
+   int totalBarWidth = (NUM_SLOTS * SLOT_SIZE) + ((NUM_SLOTS - 1) * SLOT_PADDING);
+   int startX = (screenWidth - totalBarWidth) / 2;
+   int startY = screenHeight - BAR_BOTTOM_MARGIN - SLOT_SIZE;
 
-        DrawRectangle(x, y, SLOT_SIZE, SLOT_SIZE, Fade(BLACK, 0.6f));
-        DrawRectangleLines(x, y, SLOT_SIZE, SLOT_SIZE, LIGHTGRAY);
-        DrawText(TextFormat("%d", i + 1), x + 2, y + 2, 10, GRAY);
+   const std::vector<Item>& inventory = mGameState.player->getInventory();
 
-        if (i < (int)inventory.size())
-        {
-            ItemType type = inventory[i].type;
-            
-            Color itemColor = WHITE;
-            const char* itemText = "?";
+   for (int i = 0; i < NUM_SLOTS; i++) {
+      int x = startX + i * (SLOT_SIZE + SLOT_PADDING);
+      int y = startY;
 
-            switch (type) {
-                case ITEM_APPLE:      itemColor = RED;         itemText = "Ap"; break;
-                case ITEM_BASS:       itemColor = BLUE;        itemText = "Fi"; break;
-                case ITEM_BUTTERFLY:  itemColor = GREEN;       itemText = "Bg"; break;
-                
-                case ITEM_CORN:           itemColor = YELLOW;      itemText = "Co"; break;
-                case ITEM_TURNIP:         itemColor = PURPLE;      itemText = "Tu"; break;
-                case ITEM_CAULIFLOWER:    itemColor = GREEN;       itemText = "Cau"; break;
-                case ITEM_PEPPER:         itemColor = RED;         itemText = "Pe"; break;
-                case ITEM_PINEAPPLE:      itemColor = YELLOW;      itemText = "Pi"; break;
-                case ITEM_SQUASH:         itemColor = GREEN;       itemText = "Sq"; break;
-                case ITEM_PUMPKIN:        itemColor = ORANGE;      itemText = "Pu"; break;
-                case ITEM_CARROT:         itemColor = ORANGE;      itemText = "Ca"; break;
-                
-                case SEEDS_CORN:          itemColor = DARKGREEN;   itemText = "S-C"; break;
-                case SEEDS_TURNIP:        itemColor = DARKGREEN;   itemText = "S-T"; break;
-                case SEEDS_CAULIFLOWER:   itemColor = DARKGREEN;   itemText = "S-Cau"; break;
-                case SEEDS_PEPPER:        itemColor = DARKGREEN;   itemText = "S-P"; break;
-                case SEEDS_PINEAPPLE:     itemColor = DARKGREEN;   itemText = "S-Pi"; break;
-                case SEEDS_SQUASH:        itemColor = DARKGREEN;   itemText = "S-Sq"; break;
-                case SEEDS_PUMPKIN:       itemColor = DARKGREEN;   itemText = "S-Pu"; break;
-                case SEEDS_CARROT:        itemColor = DARKGREEN;   itemText = "S-Ca"; break;
+      DrawRectangle(x, y, SLOT_SIZE, SLOT_SIZE, Fade(BLACK, 0.6f));
+      DrawRectangleLines(x, y, SLOT_SIZE, SLOT_SIZE, LIGHTGRAY);
+      DrawText(TextFormat("%d", i + 1), x + 2, y + 2, 10, GRAY);
 
-                default: break;
-            }
-            DrawRectangle(x + 8, y + 8, 24, 24, itemColor);
-            DrawText(itemText, x + 10, y + 12, 10, WHITE); // Centered Text
-        }
-    }
+      if (i < (int)inventory.size()) {
+         ItemType type = inventory[i].type;
+         
+         Color itemColor = WHITE;
+         const char* itemText = "?";
+
+         switch (type) {
+               case ITEM_APPLE:      itemColor = RED;         itemText = "Ap"; break;
+               case ITEM_BASS:       itemColor = BLUE;        itemText = "Fi"; break;
+               case ITEM_BUTTERFLY:  itemColor = GREEN;       itemText = "Bg"; break;
+               
+               case ITEM_CORN:           itemColor = YELLOW;      itemText = "Co"; break;
+               case ITEM_TURNIP:         itemColor = PURPLE;      itemText = "Tu"; break;
+               case ITEM_CAULIFLOWER:    itemColor = GREEN;       itemText = "Cau"; break;
+               case ITEM_PEPPER:         itemColor = RED;         itemText = "Pe"; break;
+               case ITEM_PINEAPPLE:      itemColor = YELLOW;      itemText = "Pi"; break;
+               case ITEM_SQUASH:         itemColor = GREEN;       itemText = "Sq"; break;
+               case ITEM_PUMPKIN:        itemColor = ORANGE;      itemText = "Pu"; break;
+               case ITEM_CARROT:         itemColor = ORANGE;      itemText = "Ca"; break;
+               
+               case SEEDS_CORN:          itemColor = DARKGREEN;   itemText = "S-C"; break;
+               case SEEDS_TURNIP:        itemColor = DARKGREEN;   itemText = "S-T"; break;
+               case SEEDS_CAULIFLOWER:   itemColor = DARKGREEN;   itemText = "S-Cau"; break;
+               case SEEDS_PEPPER:        itemColor = DARKGREEN;   itemText = "S-P"; break;
+               case SEEDS_PINEAPPLE:     itemColor = DARKGREEN;   itemText = "S-Pi"; break;
+               case SEEDS_SQUASH:        itemColor = DARKGREEN;   itemText = "S-Sq"; break;
+               case SEEDS_PUMPKIN:       itemColor = DARKGREEN;   itemText = "S-Pu"; break;
+               case SEEDS_CARROT:        itemColor = DARKGREEN;   itemText = "S-Ca"; break;
+
+               default: break;
+         }
+         DrawRectangle(x + 8, y + 8, 24, 24, itemColor);
+         DrawText(itemText, x + 10, y + 12, 10, WHITE);
+      }
+   }
 }
 
 void LevelA::shutdown()

@@ -8,7 +8,6 @@ public:
     static constexpr int LEVEL_WIDTH = 7;
     static constexpr int LEVEL_HEIGHT = 7;
 private:
-    // 14 x 10 = 140 entries — make sure this exactly equals LEVEL_WIDTH * LEVEL_HEIGHT
     unsigned int floor[LEVEL_WIDTH * LEVEL_HEIGHT] = {
         174,748,748,748,748,748,181,
         174,798,798,798,798,798,181,

@@ -46,7 +46,7 @@ void Level0::render()
    
    mGameState.map->render();
 
-   const char* titleText = "Kindlewood (Unfinished! D:)";
+   const char* titleText = "Kindlewood Village";
    int titleFontSize = 60;
    int titleTextWidth = MeasureText(titleText, titleFontSize);
    DrawText(titleText, (GetScreenWidth() - titleTextWidth) / 2, GetScreenHeight() / 4, titleFontSize, WHITE);

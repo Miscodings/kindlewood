@@ -1,6 +1,6 @@
 /**
 * Author: Justin Dutta
-* Assignment: Kindlewood
+* Assignment: Kindlewood Village
 * Date due: 12/05/2025, 2:00pm
 * I pledge that I have completed this assignment without
 * collaborating with anyone else, in conformance with the
@@ -56,12 +56,11 @@ void switchToScene(Scene *scene)
         gCurrentScene = scene;
         gCurrentScene->initialise();
     }
-
 }
 
 void initialise()
 {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Kindlewood Sanctuary"); // Cute Title!
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Kindlewood Village");
     InitAudioDevice();
 
     gShader.load("shaders/vertex.glsl", "shaders/fragment.glsl");
@@ -76,7 +75,7 @@ void initialise()
     gLevels.push_back(gLevelA);
     gLevels.push_back(gLevelB);
 
-    switchToScene(gLevels[2]);
+    switchToScene(gLevels[0]);
 
     gEffects = new Effects(ORIGIN, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
     gEffects->start(FADEIN); // Fade into the intro
@@ -102,7 +101,6 @@ void processInput()
         Entity* player = gCurrentScene->getState().player;
         player->resetMovement();
 
-        // Movement
         if      (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))  player->moveLeft();
         else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) player->moveRight();
         if      (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))    player->moveUp();
@@ -132,7 +130,6 @@ void update()
     float ticks = (float) GetTime();
     float deltaTime = ticks - gPreviousTicks;
     gPreviousTicks  = ticks;
-
     gTimeAccumulator += deltaTime;
 
     while (gTimeAccumulator >= FIXED_TIMESTEP)
@@ -207,15 +204,12 @@ void shutdown()
 int main(void)
 {
     initialise();
-
     while (gAppStatus == RUNNING)
     {
         processInput();
         update();
         render();
     }
-
     shutdown();
-
     return 0;
 }

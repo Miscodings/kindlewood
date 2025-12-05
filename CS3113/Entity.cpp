@@ -96,7 +96,6 @@ void Entity::checkCollisionX(const std::vector<Entity*>& collidableEntities)
 {
     for (Entity* collidableEntity : collidableEntities)
     {
-        // Don't collide with self
         if (collidableEntity == this) continue;
 
         EntityType type = collidableEntity->getEntityType();
@@ -162,9 +161,7 @@ void Entity::checkCollisionY(Map *map)
 void Entity::checkCollisionX(Map *map)
 {
     if (map == nullptr) return;
-
     Vector2 leftCentreProbe   = { mPosition.x - (mColliderDimensions.x / 2.0f), mPosition.y };
-
     Vector2 rightCentreProbe  = { mPosition.x + (mColliderDimensions.x / 2.0f), mPosition.y };
 
     float xOverlap = 0.0f;
@@ -238,10 +235,7 @@ void Entity::updateWanderer(Map* map)
     if (mAITimer <= 0.0f)
     {
         mAITimer = mAIDecisionTime;
-        if (GetRandomValue(0, 100) < 20)
-        {
-            mAIDirection = {0, 0};
-        }
+        if (GetRandomValue(0, 100) < 20) { mAIDirection = {0, 0}; }
         else
         {
             float dx = (float)GetRandomValue(-10, 10) / 10.0f;
@@ -269,7 +263,6 @@ void Entity::updateWanderer(Map* map)
 void Entity::updateIdler()
 {
     mMovement = {0, 0};
-
     mAITimer -= GetFrameTime();
     if (mAITimer <= 0.0f)
     {
@@ -290,9 +283,7 @@ void Entity::update(float deltaTime, Entity *player, Map *map, const std::vector
 {
     if (mEntityStatus == INACTIVE) return;
 
-    if (mShakeTimer > 0.0f) {
-        mShakeTimer -= deltaTime;
-    }
+    if (mShakeTimer > 0.0f) { mShakeTimer -= deltaTime; }
 
     if (mIsFishing)
     {
@@ -307,9 +298,7 @@ void Entity::update(float deltaTime, Entity *player, Map *map, const std::vector
                 mFishOnHook = true;
                 mHookWindowTimer = 1.5f;
             }
-        }
-        else
-        {
+        } else {
             mHookWindowTimer -= deltaTime;
             if (mHookWindowTimer <= 0.0f)
             {
@@ -320,9 +309,7 @@ void Entity::update(float deltaTime, Entity *player, Map *map, const std::vector
         return; 
     }
 
-    if (mEntityType == NPC || mEntityType == BUG || mEntityType == FISH) {
-        AIUpdate(map);
-    }
+    if (mEntityType == NPC || mEntityType == BUG || mEntityType == FISH) { AIUpdate(map); }
 
     resetColliderFlags();
 
@@ -372,16 +359,14 @@ void Entity::drawTool()
 {
     if (mEquippedTool == TOOL_NONE) return;
 
-    // --- Select Texture ---
     Texture2D* currentToolTex = nullptr;
-    if (mEquippedTool == TOOL_NET) currentToolTex = &mTextureNet;
-    else if (mEquippedTool == TOOL_ROD) currentToolTex = &mTextureRod;
-    else if (mEquippedTool == TOOL_WATERING_CAN) currentToolTex = &mTextureWateringCan;
-    else if (mEquippedTool == TOOL_HOE) currentToolTex = &mTextureHoe;
+    if      (mEquippedTool == TOOL_NET)             currentToolTex = &mTextureNet;
+    else if (mEquippedTool == TOOL_ROD)             currentToolTex = &mTextureRod;
+    else if (mEquippedTool == TOOL_WATERING_CAN)    currentToolTex = &mTextureWateringCan;
+    else if (mEquippedTool == TOOL_HOE)             currentToolTex = &mTextureHoe;
 
     if (!currentToolTex || currentToolTex->id == 0) return;
 
-    // --- Configuration ---
     Vector2 toolOffset = { 0.0f, 0.0f };
     float toolSize     = 12.0f; 
 
@@ -408,7 +393,6 @@ void Entity::drawTool()
     }
 
     if (mFishOnHook) {
-        // Simple shake effect
         toolOffset.x += GetRandomValue(-2, 2);
         toolOffset.y += GetRandomValue(-2, 2);
         DrawText("!", mPosition.x + toolOffset.x, mPosition.y + toolOffset.y - 10, 20, RED);
@@ -435,8 +419,8 @@ void Entity::render()
     }
 
     Rectangle destinationArea = { 
-        mPosition.x + shakeX, // Add shake
-        mPosition.y + shakeY, // Add shake
+        mPosition.x + shakeX,
+        mPosition.y + shakeY,
         static_cast<float>(mScale.x), 
         static_cast<float>(mScale.y) 
     };
@@ -447,23 +431,12 @@ void Entity::render()
 
     if (mEntityType == CROP) {
         float tileDim = 32.0f;
-
-        if (mIsWatered) {
-            tint = { 180, 180, 220, 255 }; 
-        }
+        if (mIsWatered) { tint = { 180, 180, 220, 255 }; }
         
-        int row = 0;
-        int col = 0;
+        int row = 0; int col = 0;
 
-        if (mCropType == CROP_NONE) {
-            row = 0; 
-            col = 0;
-        } 
-        else {
-            // Row 1 = Corn, Row 2 = Turnip, etc.
-            row = (int)mCropType; 
-            col = mGrowthStage;
-        }
+        if (mCropType == CROP_NONE) { row = 0; col = 0;} 
+        else { row = (int)mCropType; col = mGrowthStage; }
         
         textureArea = { 
             col * tileDim, 
@@ -541,7 +514,6 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
 {
     std::string output = "";
 
-    // 1. Define Interaction Sensor (In front of player for Crops/NPCs/Trees)
     float sensorSize = 10.0f; 
     float reach = 10.0f;
 
@@ -556,19 +528,16 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
     float dirTop    = dirCenter.y - (sensorSize / 2.0f);
     float dirBottom = dirCenter.y + (sensorSize / 2.0f);
 
-    // 2. Define Proximity Sensor (Overlapping player for Collectibles)
     float proxSize = 10.0f; 
     float proxLeft   = mPosition.x - (proxSize / 2.0f);
     float proxRight  = mPosition.x + (proxSize / 2.0f);
     float proxTop    = mPosition.y - (proxSize / 2.0f);
     float proxBottom = mPosition.y + (proxSize / 2.0f);
 
-    for (auto it = worldEntities.begin(); it != worldEntities.end(); )
-    {
+    for (auto it = worldEntities.begin(); it != worldEntities.end(); ) {
         Entity* e = *it;
         if (e == this) { ++it; continue; }
 
-        // Calculate entity bounds
         float eHalfW = e->getColliderDimensions().x / 2.0f;
         float eHalfH = e->getColliderDimensions().y / 2.0f;
         float eLeft   = e->getPosition().x - eHalfW;
@@ -576,9 +545,7 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
         float eTop    = e->getPosition().y - eHalfH;
         float eBottom = e->getPosition().y + eHalfH;
 
-        // --- TYPE A: COLLECTIBLES (Proximity Check) ---
-        if (e->getEntityType() == COLLECTIBLE)
-        {
+        if (e->getEntityType() == COLLECTIBLE) {
             bool inProximity = (proxRight > eLeft) && (proxLeft < eRight) && 
                                (proxBottom > eTop) && (proxTop < eBottom);
             
@@ -592,19 +559,13 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                 it = worldEntities.erase(it);
                 output = "Picked up an Apple";
                 break; 
-            } else {
-                ++it;
-            }
-        }
-        else 
-        {
+            } else { ++it; }
+        } else {
             bool inDirection = (dirRight > eLeft) && (dirLeft < eRight) && 
                                (dirBottom > eTop) && (dirTop < eBottom);
 
-            if (inDirection)
-            {
-                if (e->getEntityType() == PROP && e->getScale().y == 48.0f)
-                {
+            if (inDirection) {
+                if (e->getEntityType() == PROP && e->getScale().y == 48.0f) {
                     float randX = (float)GetRandomValue(-20, 20);
                     float randY = (float)GetRandomValue(10, 30);
                     Entity* apple = new Entity(
@@ -624,7 +585,6 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                     }
                     break;
                 } else if (e->getEntityType() == CROP) {
-                    // A. HARVESTING
                     if (e->mGrowthStage == 2 && e->mCropType != CROP_NONE) 
                     {
                         if (mInventory.size() >= MAX_INVENTORY_SIZE) {
@@ -656,7 +616,6 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                         int seedIndex = -1;
                         CropType typeToPlant = CROP_NONE;
 
-                        // Find first seed in inventory
                         for (int i = 0; i < mInventory.size(); i++) {
                             switch (mInventory[i].type) {
                                 case SEEDS_CORN:        seedIndex = i; typeToPlant = CROP_CORN; break;
@@ -669,7 +628,7 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                                 case SEEDS_CARROT:      seedIndex = i; typeToPlant = CROP_CARROT; break;
                                 default: break;
                             }
-                            if (seedIndex != -1) break; // Found one
+                            if (seedIndex != -1) break;
                         }
 
                         if (seedIndex != -1) {
@@ -715,7 +674,6 @@ std::string Entity::interact(std::vector<Entity*>& worldEntities)
                         }
                         break; 
                     }
-                    // 5. HOUSE ENTRY
                     else if (data == "ACTION_ENTER_HOUSE") {
                         output = "ACTION_ENTER_HOUSE"; // Signal to Scene
                         break;
@@ -735,20 +693,17 @@ std::string Entity::useTool(std::vector<Entity*>& worldEntities, Map* map)
     Vector2 reachPoint = mPosition;
     float reachDistance = 10.0f;
 
-    if (mDirection == LEFT || mDirection == LEFT_WALK)        reachPoint.x -= reachDistance;
+    if      (mDirection == LEFT  || mDirection == LEFT_WALK)   reachPoint.x -= reachDistance;
     else if (mDirection == RIGHT || mDirection == RIGHT_WALK) reachPoint.x += reachDistance;
-    else if (mDirection == UP || mDirection == UP_WALK)       reachPoint.y -= reachDistance;
-    else if (mDirection == DOWN || mDirection == DOWN_WALK)   reachPoint.y += reachDistance;
+    else if (mDirection == UP    || mDirection == UP_WALK)       reachPoint.y -= reachDistance;
+    else if (mDirection == DOWN  || mDirection == DOWN_WALK)   reachPoint.y += reachDistance;
 
     Rectangle toolHitbox = { reachPoint.x - 10, reachPoint.y - 10, 20, 20 };
 
-    if (mEquippedTool == TOOL_NET)
-    {
-        for (auto it = worldEntities.begin(); it != worldEntities.end(); )
-        {
+    if (mEquippedTool == TOOL_NET) {
+        for (auto it = worldEntities.begin(); it != worldEntities.end(); ) {
             Entity* e = *it;
-            if (e->getEntityType() == BUG && e->isActive())
-            {
+            if (e->getEntityType() == BUG && e->isActive()) {
                 Rectangle targetRect = {
                     e->getPosition().x - e->getColliderDimensions().x/2,
                     e->getPosition().y - e->getColliderDimensions().y/2,
@@ -756,8 +711,7 @@ std::string Entity::useTool(std::vector<Entity*>& worldEntities, Map* map)
                     e->getColliderDimensions().y
                 };
 
-                if (CheckCollisionRecs(toolHitbox, targetRect))
-                {
+                if (CheckCollisionRecs(toolHitbox, targetRect)) {
                     if (mInventory.size() >= MAX_INVENTORY_SIZE) { return "Inventory Full!"; }
                     mInventory.push_back({ ITEM_BUTTERFLY, 150 }); 
                     delete e;
@@ -769,10 +723,8 @@ std::string Entity::useTool(std::vector<Entity*>& worldEntities, Map* map)
         }
     }
 
-    else if (mEquippedTool == TOOL_ROD)
-    {
-        if (!mIsFishing)
-        {
+    else if (mEquippedTool == TOOL_ROD) {
+        if (!mIsFishing) {
             Vector2 castPos = mPosition;
             float castDist = 30.0f; 
 
@@ -885,8 +837,7 @@ std::string Entity::useTool(std::vector<Entity*>& worldEntities, Map* map)
         return "Blocked.";
 
     } else if (mEquippedTool == TOOL_WATERING_CAN) {
-        bool wateredAny = false; // Track if we hit at least one
-
+        bool wateredAny = false;
         for (Entity* e : worldEntities) {
             if (e->getEntityType() == CROP) 
             {
@@ -903,10 +854,8 @@ std::string Entity::useTool(std::vector<Entity*>& worldEntities, Map* map)
                 }
             }
         }
-
         if (wateredAny) return "Watered.";
-    }
-    
+    } 
     return "";
 }
 

@@ -40,7 +40,6 @@ private:
     
     Texture2D mTexture;
     
-    // --- DISTINCT TOOL TEXTURES ---
     Texture2D mTextureNet;
     Texture2D mTextureRod;
     Texture2D mTextureWateringCan;
@@ -104,9 +103,9 @@ private:
     float mFishingTimer;
     float mHookWindowTimer;
 
-    CropType mCropType;   // Which plant is it?
-    int mGrowthStage;     // 0 = Seed, 1 = Sprout, 2 = Medium, 3 = Ripe
-    bool mIsWatered;      // Is the soil dark (wet)?
+    CropType mCropType;
+    int mGrowthStage;
+    bool mIsWatered;
 
     std::vector<std::string> mDialogueLines;
     int mDialogueIndex = 0;
@@ -263,7 +262,7 @@ public:
     std::string getNextDialogue() {
         if (mDialogueLines.empty()) return "";
         std::string line = mDialogueLines[mDialogueIndex];
-        mDialogueIndex = (mDialogueIndex + 1) % mDialogueLines.size(); // loops
+        mDialogueIndex = (mDialogueIndex + 1) % mDialogueLines.size();
         return line;
     }
     
@@ -281,10 +280,10 @@ public:
             if (mGrowthStage < 2) {
                 mGrowthStage++;
             }
-            mIsWatered = false; // Soil dries out overnight
+            mIsWatered = false;
         }
         else if (mCropType == CROP_NONE) {
-             mIsWatered = false; // Empty soil dries out too
+             mIsWatered = false;
         }
     }
 };

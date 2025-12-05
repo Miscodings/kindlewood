@@ -19,7 +19,6 @@ private:
     std::vector<std::string> mStoryLines;
     int mCurrentLineIndex = 0;
     
-    // Typewriter effect variables
     std::string mDisplayedText = "";
     int mCharIndex = 0;
     float mTypewriterTimer = 0.0f;
