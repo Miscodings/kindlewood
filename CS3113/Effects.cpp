@@ -1,7 +1,7 @@
 #include "Effects.h"
 
 Effects::Effects(Vector2 origin, float windowWidth, float windowHeight) : mAlpha{SOLID}, 
-                     mEffectSpeed{DEFAULT_SPEED},
+                     mEffectSpeed{DEFAULT_SPEED * 4.0f},
                      mOverlayWidth{windowWidth}, 
                      mOverlayHeight{windowHeight}, mCurrentEffect{NONE},
                      mViewOffset{{}}, mOrigin{origin}, 

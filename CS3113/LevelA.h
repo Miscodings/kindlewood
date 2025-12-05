@@ -15,6 +15,11 @@ private:
     void spawnBug();
     float mBugRespawnTimer = 0.0f;
     
+    float mTimeOfDay = 0.0f;
+    float mDayDuration = 60.0f;
+    int mDayCount = 1;
+    Color mNightColor = { 10, 10, 40, 255 };
+
     bool mIsChatting = false;
     std::string mCurrentChatText = "";
 

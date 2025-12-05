@@ -6,14 +6,14 @@
 
 struct Tileset {
     Texture2D texture;
-    int firstGid;  // The starting Global ID for this tileset (e.g., 1, 101, etc.)
-    int tileCount; // Total number of tiles in this image
-    int columns;   // Number of columns in this image
+    int firstGid;
+    int tileCount;
+    int columns;
 };
 
 struct MapLayer {
     std::vector<unsigned int> data;
-    bool isCollidable; // We can choose which layers stop the player!
+    bool isCollidable;
 };
 
 class Map

@@ -1,5 +1,16 @@
+/**
+* Author: Justin Dutta
+* Assignment: Kindlewood
+* Date due: 12/05/2025, 2:00pm
+* I pledge that I have completed this assignment without
+* collaborating with anyone else, in conformance with the
+* NYU School of Engineering Policies and Procedures on
+* Academic Misconduct.
+**/
+
 #include "CS3113/Level0.h"
 #include "CS3113/LevelA.h"
+#include "CS3113/LevelB.h"
 #include "CS3113/IntroScene.h"
 #include "CS3113/ShaderProgram.h"
 #include "CS3113/Effects.h"
@@ -21,6 +32,7 @@ std::vector<Scene*> gLevels;
 
 Level0 *gLevel0 = nullptr;
 LevelA *gLevelA = nullptr;
+LevelB *gLevelB = nullptr;
 IntroScene *gIntroScene = nullptr;
 
 bool gIsTransitioning = false;
@@ -57,10 +69,12 @@ void initialise()
     gIntroScene = new IntroScene(ORIGIN, "#000000ff");
     gLevel0 = new Level0(ORIGIN, "#76b6ff");
     gLevelA     = new LevelA(ORIGIN, "#76b6ff"); 
+    gLevelB     = new LevelB(ORIGIN, "#000000ff"); 
 
     gLevels.push_back(gIntroScene);
     gLevels.push_back(gLevel0);
     gLevels.push_back(gLevelA);
+    gLevels.push_back(gLevelB);
 
     switchToScene(gLevels[2]);
 
@@ -78,7 +92,7 @@ void processInput()
     if (gCurrentScene->isChatting()) 
     {
         if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
-            gCurrentScene->advanceChat();
+            gCurrentScene->stopChat();
         }
         return;
     }
@@ -99,7 +113,7 @@ void processInput()
         }
 
         if (IsKeyPressed(KEY_SPACE)) {
-            std::string actionResult = player->useTool(gCurrentScene->getState().entities);
+            std::string actionResult = player->useTool(gCurrentScene->getState().entities, gCurrentScene->getState().map);
             if (!actionResult.empty()) gCurrentScene->setChat(actionResult);
             else {
                 std::string dialogue = player->interact(gCurrentScene->getState().entities);

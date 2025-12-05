@@ -3,13 +3,18 @@
 
 #include "Map.h"
 
-enum Direction    { LEFT, RIGHT, UP, DOWN, LEFT_WALK, RIGHT_WALK, UP_WALK, DOWN_WALK };
-enum EntityStatus { ACTIVE, INACTIVE                                      };
-enum EntityType   { PLAYER, BLOCK, PLATFORM, NPC, PROP, COLLECTIBLE, BUG, FISH, MISC };
-enum AIType       { WANDERER, FOLLOWER, VERTICAL_FLYER                    };
-enum AIState      { WALKING, IDLE, FOLLOWING                              };
-enum ToolType { TOOL_NONE, TOOL_NET, TOOL_AXE, TOOL_ROD };
-enum ItemType { ITEM_NONE, ITEM_APPLE, ITEM_GEM, ITEM_BUTTERFLY, ITEM_BASS };
+enum Direction    { LEFT, RIGHT, UP, DOWN, LEFT_WALK, RIGHT_WALK, UP_WALK, DOWN_WALK        };
+enum EntityStatus { ACTIVE, INACTIVE                                                        };
+enum EntityType   { PLAYER, BLOCK, PLATFORM, NPC, PROP, COLLECTIBLE, BUG, FISH, MISC, CROP  };
+enum AIType       { AI_WANDERER, AI_IDLER, AI_CIRCLE                                        };
+
+enum ToolType { TOOL_NONE, TOOL_NET, TOOL_ROD, TOOL_HOE, TOOL_WATERING_CAN                  };
+
+enum ItemType { ITEM_NONE, ITEM_APPLE, ITEM_GEM, ITEM_BUTTERFLY, ITEM_BASS,
+                ITEM_CORN, ITEM_TURNIP, ITEM_CAULIFLOWER, ITEM_PEPPER, ITEM_PINEAPPLE, ITEM_SQUASH, ITEM_PUMPKIN, ITEM_CARROT,
+                SEEDS_CORN, SEEDS_TURNIP, SEEDS_CAULIFLOWER, SEEDS_PEPPER, SEEDS_PINEAPPLE, SEEDS_SQUASH, SEEDS_PUMPKIN, SEEDS_CARROT };
+
+enum CropType { CROP_NONE, CROP_CORN, CROP_TURNIP, CROP_CAULIFLOWER, CROP_PEPPER, CROP_PINEAPPLE, CROP_SQUASH, CROP_PUMPKIN, CROP_CARROT };
 
 struct Item {
     ItemType type;
@@ -37,8 +42,9 @@ private:
     
     // --- DISTINCT TOOL TEXTURES ---
     Texture2D mTextureNet;
-    Texture2D mTextureAxe;
     Texture2D mTextureRod;
+    Texture2D mTextureWateringCan;
+    Texture2D mTextureHoe;
 
     TextureType mTextureType;
     Vector2 mSpriteSheetDimensions;
@@ -53,6 +59,7 @@ private:
 
     int mSpeed;
     float mAngle;
+    float mShakeTimer;
 
     bool mIsCollidingTop    = false;
     bool mIsCollidingBottom = false;
@@ -62,10 +69,12 @@ private:
     EntityStatus mEntityStatus = ACTIVE;
     EntityType   mEntityType;
 
-    AIType  mAIType;
-    AIState mAIState;
-    float mAIStateTime = 0.0f;
-    float mAIStateDuration = 2.0f;
+    AIType mAIType;
+    float mAITimer = 0.0f;
+    float mAIDecisionTime = 1.5f;
+    Vector2 mAIDirection = {0, 0};
+    float mCircleAngle = 0.0f;
+    Vector2 mAnchorPosition = {0.0f, 0.0f};
 
     bool isColliding(Entity *other) const;
 
@@ -73,6 +82,7 @@ private:
     void checkCollisionX(const std::vector<Entity*>& collidableEntities);
     void checkCollisionX(Map *map);
     void checkCollisionY(Map *map);
+    void updateCircle(); 
     
     void resetColliderFlags() 
     {
@@ -83,12 +93,20 @@ private:
     }
 
     void animate(float deltaTime);
-    void AIActivate(Entity *target, Map* map); 
-    void AIWander(Map* map);
-    void AIFollow(Entity *target);
+    void AIUpdate(Map* map);
+    void updateWanderer(Map* map);
+    void updateIdler();
 
-    // Helper to draw the tool
     void drawTool();
+
+    bool mIsFishing;
+    bool mFishOnHook;
+    float mFishingTimer;
+    float mHookWindowTimer;
+
+    CropType mCropType;   // Which plant is it?
+    int mGrowthStage;     // 0 = Seed, 1 = Sprout, 2 = Medium, 3 = Ripe
+    bool mIsWatered;      // Is the soil dark (wet)?
 
     std::vector<std::string> mDialogueLines;
     int mDialogueIndex = 0;
@@ -145,8 +163,6 @@ public:
     float       getAngle()                 const { return mAngle;                 }
     EntityType  getEntityType()            const { return mEntityType;            }
     AIType      getAIType()                const { return mAIType;                }
-    AIState     getAIState()               const { return mAIState;               }
-
     
     bool isCollidingTop()    const { return mIsCollidingTop;    }
     bool isCollidingBottom() const { return mIsCollidingBottom; }
@@ -164,11 +180,11 @@ public:
     void setTexture(const char *textureFilepath)
         { mTexture = LoadTexture(textureFilepath); }
     
-    // New function to load 3 separate images
-    void loadToolTextures(const char* netPath, const char* axePath, const char* rodPath) {
+    void loadToolTextures(const char* netPath, const char* rodPath, const char* wateringCanPath, const char* hoePath) {
         mTextureNet = LoadTexture(netPath);
-        mTextureAxe = LoadTexture(axePath);
         mTextureRod = LoadTexture(rodPath);
+        mTextureWateringCan = LoadTexture(wateringCanPath);
+        mTextureHoe = LoadTexture(hoePath);
     }
 
     void setColliderDimensions(Vector2 newDimensions) 
@@ -189,18 +205,55 @@ public:
 
         if (mTextureType == ATLAS) mAnimationIndices = mAnimationAtlas.at(mDirection);
     }
-    void setAIState(AIState newState)
-        { mAIState = newState;                     }
-    void setAIType(AIType newType)
-        { mAIType = newType;                       }
+    void setAIType(AIType newType) { 
+        mAIType = newType; 
+        if (mAIType == AI_CIRCLE) {
+            mAnchorPosition = mPosition;
+        }
+    }
     ToolType getTool() const { return mEquippedTool; }
 
     std::string interact(std::vector<Entity*>& worldEntities);
-    std::string useTool(std::vector<Entity*>& worldEntities); 
+    std::string useTool(std::vector<Entity*>& worldEntities, Map* map);
     void sellItems();
     
     int getMoney() const { return mMoney; }
     int getInventorySize() const { return mInventory.size(); }
+    const std::vector<Item>& getInventory() const { return mInventory; }
+    static constexpr int MAX_INVENTORY_SIZE = 9;
+    
+    static int sGlobalMoney;
+    static std::vector<Item> sGlobalInventory;
+    static Vector2 sGlobalSpawnPosition;
+    
+    void savePlayerData() {
+        sGlobalMoney = mMoney;
+        sGlobalInventory = mInventory;
+    }
+    
+    void loadPlayerData() {
+        mMoney = sGlobalMoney;
+        mInventory = sGlobalInventory;
+    }
+
+    static Vector2 getGlobalSpawnPosition() { return sGlobalSpawnPosition; }
+    static void setGlobalSpawnPosition(Vector2 pos) { sGlobalSpawnPosition = pos; }
+
+    
+    struct CropSaveData {
+        Vector2 position;
+        CropType type;
+        int growthStage;
+        bool isWatered;
+    };
+    static std::vector<CropSaveData> sGlobalCrops;
+    static int sGlobalDayCount;
+    static float sGlobalTimeOfDay;
+    CropType getCropType() const { return mCropType; }
+    int getGrowthStage() const { return mGrowthStage; }
+    void setGrowthStage(int stage) { mGrowthStage = stage; }
+
+    void setShakeTimer(float time) { mShakeTimer = time; }
     
     void setDialogue(const std::vector<std::string>& lines) {
         mDialogueLines = lines;
@@ -216,8 +269,23 @@ public:
     
     void cycleTool() {
         int t = (int)mEquippedTool + 1;
-        if (t > TOOL_ROD) t = TOOL_NONE;
+        if (t > TOOL_WATERING_CAN) t = TOOL_NONE;
         mEquippedTool = (ToolType)t;
+    }
+
+    void setCropType(CropType type) { mCropType = type; }
+    void setWatered(bool isWatered) { mIsWatered = isWatered; }
+    bool isWatered() const { return mIsWatered; }
+    void growCrop() {
+        if (mCropType != CROP_NONE && mIsWatered) {
+            if (mGrowthStage < 2) {
+                mGrowthStage++;
+            }
+            mIsWatered = false; // Soil dries out overnight
+        }
+        else if (mCropType == CROP_NONE) {
+             mIsWatered = false; // Empty soil dries out too
+        }
     }
 };
 
