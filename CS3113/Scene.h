@@ -13,6 +13,7 @@ struct GameState
     Sound jumpSound;
     Sound hurtSound;
     Sound goalSound;
+    Sound clickSound;
 
     Camera2D camera;
 

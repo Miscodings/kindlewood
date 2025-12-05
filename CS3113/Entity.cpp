@@ -464,7 +464,7 @@ void Entity::render()
         } else if (mEntityType == PLAYER) {
             originOffset = { static_cast<float>(mScale.x) / 2.0f, static_cast<float>(mScale.y) / 2.0f + (mColliderDimensions.y * 1.5f) };
         } else {
-            originOffset = { static_cast<float>(mScale.x) / 2.0f, static_cast<float>(mScale.y) / 2.0f };
+            originOffset = { static_cast<float>(mScale.x) / 2.0f, static_cast<float>(mScale.y) / 2.0f + 10.0f };
         }
 
         bool holdingTool = (mEntityType == PLAYER && mEquippedTool != TOOL_NONE);
