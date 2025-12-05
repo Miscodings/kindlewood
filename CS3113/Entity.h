@@ -286,6 +286,35 @@ public:
              mIsWatered = false;
         }
     }
+    
+    static Sound sfxDoor;
+    static Sound sfxTill;
+    static Sound sfxWater;
+    static Sound sfxCatch;
+    static Sound sfxMoney;
+    static Sound sfxPickup;
+
+    static void loadEntitySounds() {
+        sfxPickup     = LoadSound("assets/game/sfx_pickup.wav");
+        sfxDoor       = LoadSound("assets/game/sfx_door.wav");
+        sfxWater      = LoadSound("assets/game/sfx_water.wav");
+        sfxTill       = LoadSound("assets/game/sfx_till.wav");
+        sfxCatch      = LoadSound("assets/game/sfx_catch.wav");
+        sfxMoney      = LoadSound("assets/game/sfx_money.wav");
+    }
+
+    static void unloadEntitySounds() {
+        UnloadSound(sfxInteract);
+        UnloadSound(sfxTreeShake);
+        UnloadSound(sfxPickup);
+        UnloadSound(sfxDoor);
+        UnloadSound(sfxToolSwing);
+        UnloadSound(sfxWater);
+        UnloadSound(sfxTill);
+        UnloadSound(sfxCatch);
+        UnloadSound(sfxMoney);
+    }
+
 };
 
 #endif

@@ -75,7 +75,7 @@ void initialise()
     gLevels.push_back(gLevelA);
     gLevels.push_back(gLevelB);
 
-    switchToScene(gLevels[0]);
+    switchToScene(gLevels[2]);
 
     gEffects = new Effects(ORIGIN, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
     gEffects->start(FADEIN); // Fade into the intro

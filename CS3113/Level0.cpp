@@ -9,9 +9,10 @@ void Level0::initialise()
 {
    mGameState.nextSceneID = -1; 
 
-   mGameState.bgm = LoadMusicStream("assets/game/music_level1.wav");
+   mGameState.bgm1 = LoadMusicStream("assets/game/music_level3.mp3");
    mBackgroundTexture = LoadTexture("assets/game/sky.png");
-   PlayMusicStream(mGameState.bgm);
+   mLogo = LoadTexture("assets/game/logo.png");
+   PlayMusicStream(mGameState.bgm1);
 
    mGameState.map = new Map(
       16, 16,
@@ -22,7 +23,7 @@ void Level0::initialise()
 
 void Level0::update(float deltaTime)
 {
-   UpdateMusicStream(mGameState.bgm);
+   UpdateMusicStream(mGameState.bgm1);
 
    if (IsKeyPressed(KEY_ENTER)) {
        mGameState.nextSceneID = 2;
@@ -32,8 +33,8 @@ void Level0::update(float deltaTime)
 void Level0::render()
 {
    ClearBackground(ColorFromHex(mBGColourHexCode));
-   float scaleX = (float)GetScreenWidth() / mBackgroundTexture.width;
-   float scaleY = (float)GetScreenHeight() / mBackgroundTexture.height;
+   float destW = GetScreenWidth() / 2.0f;
+   float destH = GetScreenHeight() / 2.0f;
 
    DrawTexturePro(
       mBackgroundTexture,
@@ -43,18 +44,22 @@ void Level0::render()
       0.0f,
       WHITE
    );
-   
-   mGameState.map->render();
 
-   const char* titleText = "Kindlewood Village";
-   int titleFontSize = 60;
-   int titleTextWidth = MeasureText(titleText, titleFontSize);
-   DrawText(titleText, (GetScreenWidth() - titleTextWidth) / 2, GetScreenHeight() / 4, titleFontSize, WHITE);
+   DrawTexturePro(
+      mLogo,
+      { 0, 0, (float)mLogo.width, (float)mLogo.height },
+      { GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f - 150.0f, destW, destH },
+      { destW / 2.0f, destH / 2.0f },
+      0.0f,
+      WHITE
+   );
+
+   mGameState.map->render();
 
    const char* promptText = "Press ENTER to Start";
    int promptFontSize = 30;
    int promptTextWidth = MeasureText(promptText, promptFontSize);
-   DrawText(promptText, (GetScreenWidth() - promptTextWidth) / 2, GetScreenHeight() / 2, promptFontSize, LIGHTGRAY);
+   DrawText(promptText, (GetScreenWidth() - promptTextWidth) / 2, GetScreenHeight() / 2 + 100.0f, promptFontSize, LIGHTGRAY);
 }
 
 void Level0::shutdown()
@@ -63,5 +68,5 @@ void Level0::shutdown()
    mGameState.map = nullptr;
    UnloadTexture(mBackgroundTexture);
 
-   UnloadMusicStream(mGameState.bgm);
+   UnloadMusicStream(mGameState.bgm1);
 }

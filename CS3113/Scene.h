@@ -9,11 +9,19 @@ struct GameState
     Map *map;
     std::vector<Entity*> entities;
 
-    Music bgm;
-    Sound jumpSound;
-    Sound hurtSound;
-    Sound goalSound;
-    Sound clickSound;
+    Music bgm1;
+    Music bgm2;
+
+    Sound sfx_1;
+    Sound sfx_2;
+    Sound sfx_3;
+    Sound sfx_4;
+    Sound sfx_5;
+    Sound sfx_6;
+    Sound sfx_7;
+    Sound sfx_8;
+    Sound sfx_9;
+    Sound sfx_10;
 
     Camera2D camera;
 

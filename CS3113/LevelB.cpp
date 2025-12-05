@@ -10,7 +10,7 @@ LevelB::~LevelB() { shutdown(); }
 void LevelB::initialise()
 {
    mGameState.nextSceneID = -1;
-   mGameState.bgm = LoadMusicStream("assets/game/music_level1.wav");
+   mGameState.bgm1 = LoadMusicStream("assets/game/music_level1.wav");
 
    mGameState.map = new Map(
       LEVEL_WIDTH, LEVEL_HEIGHT,
@@ -177,7 +177,7 @@ void LevelB::initialise()
 
 void LevelB::update(float deltaTime)
 {
-   UpdateMusicStream(mGameState.bgm);
+   UpdateMusicStream(mGameState.bgm1);
 
    mGameState.player->update(deltaTime, mGameState.player, mGameState.map, mGameState.entities);
    mGameState.camera.target = mGameState.player->getPosition();
@@ -189,7 +189,7 @@ void LevelB::update(float deltaTime)
    if (mGameState.player->getPosition().y > mGameState.map->getBottomBoundary() - 20)
    {
       mGameState.player->savePlayerData();
-      Entity::setGlobalSpawnPosition({400.0f, 400.0f}); 
+      Entity::setGlobalSpawnPosition({340.0f, 410.0f}); 
       mGameState.nextSceneID = 2;
    }
 
@@ -332,7 +332,7 @@ void LevelB::shutdown()
       mBackgroundTexture = { 0, 0 };
    }
 
-   UnloadMusicStream(mGameState.bgm);
+   UnloadMusicStream(mGameState.bgm1);
 
    if (mGameState.player) {
       delete mGameState.player;

@@ -8,9 +8,12 @@ IntroScene::~IntroScene() {}
 void IntroScene::initialise()
 {
     mGameState.nextSceneID = -1;
-    mGameState.bgm = LoadMusicStream("assets/game/music_intro.mp3");
-    mGameState.clickSound = LoadSound("assets/game/sfx-click.mp3");
-    PlayMusicStream(mGameState.bgm);
+    mGameState.bgm1 = LoadMusicStream("assets/game/music_intro.mp3");
+    mGameState.bgm2 = LoadMusicStream("assets/game/music_level2.wav");
+    mGameState.sfx_1 = LoadSound("assets/game/sfx-click.mp3");
+    SetMusicVolume(mGameState.bgm1, 0.7f);
+    PlayMusicStream(mGameState.bgm1);
+    PlayMusicStream(mGameState.bgm2);
     
     mStoryLines = {
         "Dear Friend...",
@@ -32,7 +35,8 @@ void IntroScene::initialise()
 
 void IntroScene::update(float deltaTime)
 {
-    UpdateMusicStream(mGameState.bgm);
+    UpdateMusicStream(mGameState.bgm1);
+    UpdateMusicStream(mGameState.bgm2);
     if (mCharIndex < mStoryLines[mCurrentLineIndex].length()) 
     {
         mTypewriterTimer += deltaTime;
@@ -41,7 +45,7 @@ void IntroScene::update(float deltaTime)
             mDisplayedText += mStoryLines[mCurrentLineIndex][mCharIndex];
             mCharIndex++;
             mTypewriterTimer = 0.0f;
-            PlaySound(mGameState.clickSound);
+            PlaySound(mGameState.sfx_1);
         }
     }
 

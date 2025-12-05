@@ -22,13 +22,9 @@ void LevelA::initialise()
 
    mGameState.nextSceneID = -1; 
    
-   mGameState.bgm = LoadMusicStream("assets/game/music_level1.wav");
-   SetMusicVolume(mGameState.bgm, 0.02f);
-   PlayMusicStream(mGameState.bgm);
-
-   mGameState.jumpSound = LoadSound("assets/game/step.ogg");
-   mGameState.hurtSound = LoadSound("assets/game/hurt.ogg");
-   mGameState.goalSound = LoadSound("assets/game/goal.ogg");
+   mGameState.bgm1 = LoadMusicStream("assets/game/music_level1.wav");
+   SetMusicVolume(mGameState.bgm1, 0.02f);
+   PlayMusicStream(mGameState.bgm1);
 
    mGameState.map = new Map(
       LEVEL_WIDTH, LEVEL_HEIGHT,   
@@ -162,7 +158,7 @@ void LevelA::initialise()
 
 void LevelA::update(float deltaTime)
 {
-   UpdateMusicStream(mGameState.bgm);
+   UpdateMusicStream(mGameState.bgm1);
 
    int bugCount = 0;
    for (Entity* e : mGameState.entities) {
@@ -387,10 +383,7 @@ void LevelA::shutdown()
        }
    }
 
-   UnloadMusicStream(mGameState.bgm);
-   UnloadSound(mGameState.jumpSound);
-   UnloadSound(mGameState.hurtSound);
-   UnloadSound(mGameState.goalSound);
+   UnloadMusicStream(mGameState.bgm1);
 }
 
 void LevelA::buildForest()
